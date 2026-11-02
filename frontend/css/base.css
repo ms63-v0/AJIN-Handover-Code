@@ -1,0 +1,61 @@
+/* 기본 리셋 + 앱 골격(사이드바 / 헤더 / 본문) */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); font-size: 15px; color: var(--text); background: var(--bg-base); }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+input { font: inherit; color: inherit; }
+svg { display: block; }
+
+.app { display: flex; height: 100vh; overflow: hidden; }
+
+/* ---------- 사이드바 ---------- */
+.sidebar { width: 240px; flex: none; display: flex; flex-direction: column; gap: 8px;
+  padding: 24px 16px; background: var(--bg-card); border-right: 1px solid var(--line); }
+.logo { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 8px 12px;
+  background: var(--bg-base); border-radius: var(--radius-m); font-size: 17px; font-weight: 700; }
+.logo__mark { width: 28px; height: 28px; border-radius: var(--radius-s); background: var(--brand-gold); }
+.nav-list { display: flex; flex-direction: column; gap: 8px; }
+.nav { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: var(--radius-m);
+  color: var(--text-sub); text-decoration: none; }
+.nav svg { width: 18px; height: 18px; }
+.nav:hover { background: var(--bg-control); }
+.nav.is-active { background: var(--brand-gold-soft); color: var(--text); font-weight: 700; }
+.sidebar__spacer { flex: 1; }
+.sidebar__bottom { display: flex; flex-direction: column; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line); }
+.conn { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-m); }
+.conn__title { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+.conn__dot { width: 8px; height: 8px; border-radius: 50%; background: var(--brand-blue); }
+.conn__text, .version { font-size: 11px; color: var(--text-sub); }
+.version { color: var(--text-faint); }
+
+/* ---------- 본문 / 헤더 ---------- */
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 25px; padding: 28px; overflow: auto; }
+.header { display: flex; align-items: center; gap: 15px; flex: none; }
+.header__title { font-size: 28px; font-weight: 600; letter-spacing: -0.42px; white-space: nowrap; }
+.header__spacer { flex: 1; height: 1px; background: var(--line); }
+.header__date { color: var(--text-sub); white-space: nowrap; }
+.header__actions { display: flex; align-items: center; gap: 15px; }
+.icon-btn { position: relative; display: grid; place-items: center; padding: 8px; border-radius: var(--radius-s); }
+.icon-btn:hover { background: var(--bg-card); }
+.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn__dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--danger-dot); box-shadow: 0 0 0 2px var(--bg-base); }
+.header__divider { width: 1px; height: 16px; background: var(--brand-gold-deep); }
+.user { display: flex; align-items: center; gap: 10px; padding-left: 4px; background: var(--bg-soft); border-radius: var(--radius-m); }
+.user__info { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.user__name { font-size: 13px; font-weight: 700; line-height: 18px; }
+.user__meta { font-size: 11px; line-height: 14px; letter-spacing: 0.44px; color: var(--text-label); }
+.user__avatar { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--brand-blue); color: #fff; }
+.user__avatar svg { width: 14px; height: 14px; }
+
+.page { flex: 1; min-height: 0; }
+.msg { padding: 40px 16px; text-align: center; color: var(--text-sub); }
+.msg--error { color: var(--ng); }
+
+@media print { .sidebar, .header, .filter-bar { display: none; } .main { padding: 0; overflow: visible; } }
+
+/* ── 실시간 데이터 패널 */
+.sidebar__spacer { display: flex; flex-direction: column; justify-content: flex-end; }
+.dbtest { margin: 0 0 8px; padding: 12px 14px; border-radius: 10px; border: 1px dashed var(--line); }
+.dbtest__title { font-size: 11px; font-weight: 600; color: var(--text-faint); letter-spacing: .4px; text-transform: uppercase; margin-bottom: 6px; }
+.dbtest__pending { font-size: 11px; color: var(--text-faint); }
+@media (max-width: 960px) { .dbtest { display: none; } }

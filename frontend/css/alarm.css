@@ -1,0 +1,36 @@
+/* 알람 상태 표시 (ISA-18.2) — 모든 상태는 색 + 글자 + 아이콘으로 함께 표시한다.
+   긴급(1): 미확인 동안 천천히 깜빡임 (1Hz 미만). 경고(2): 발생 시 3초 강조 1회. 주의(3): NEW 배지만.
+   OS의 '동작 줄이기' 설정이면 깜빡임·강조는 끄고 글자·배지만 남긴다. */
+
+.acard[data-prio="1"]::after { content: none; }
+.acard[data-prio="1"] .acard__msg::before { content: "◆ 긴급  "; font-weight: 700; color: #991b1b; }
+.acard[data-prio="2"] .acard__msg::before { content: "▲ 경고  "; font-weight: 700; color: #92400e; }
+.acard[data-prio="3"] .acard__msg::before { content: "● 주의  "; font-weight: 600; color: #475569; }
+
+.acard[data-prio="3"][data-acked="0"] .acard__top::after {
+  content: "NEW"; margin-left: 6px; padding: 1px 6px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; color: #fff; background: #1f3a5f; vertical-align: middle;
+}
+
+@keyframes alarm-blink-critical {
+  0%, 100% { background-color: transparent; }
+  50%      { background-color: rgba(220, 38, 38, 0.16); }
+}
+.acard[data-prio="1"][data-acked="0"] { animation: alarm-blink-critical 1.6s ease-in-out infinite; }
+
+@keyframes alarm-flash-warning {
+  0%   { background-color: rgba(245, 158, 11, 0.30); }
+  100% { background-color: transparent; }
+}
+.acard[data-prio="2"][data-fresh] { animation: alarm-flash-warning 3s ease-out 1; }
+
+/* 이미 확인된 알람은 깜빡임·강조 없음 (글자 표시는 유지) */
+.acard[data-acked="1"] { animation: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .acard[data-prio="1"][data-acked="0"], .acard[data-prio="2"][data-fresh] { animation: none; }
+}
+
+/* 헤더 알람 목록: 미확인 항목 강조 */
+.bell-item.is-unacked { font-weight: 600; }
+.bell-item.is-unacked .bell-item__msg::before { content: "● "; color: #dc2626; }

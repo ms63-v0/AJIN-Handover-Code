@@ -1,0 +1,80 @@
+/* Lot 조회 화면 전용 스타일 */
+.lot-layout { display: flex; align-items: flex-start; gap: 25px; }
+.lot-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 25px; }
+.lot-detail { width: 343px; flex: none; }
+
+/* 결과 헤더 + 표 */
+.result-head { display: flex; align-items: center; gap: 25px; font-size: 17px; font-weight: 700; }
+.result-head__count { font-size: 15px; color: var(--text-link); }
+.table-wrap { max-height: 579px; overflow: auto; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th { position: sticky; top: 0; padding: 10px 8px; background: var(--bg-dim); font-size: 11px; font-weight: 700; color: var(--text-label); text-align: center; }
+.tbl th:first-child, .tbl th:nth-child(2) { text-align: left; }
+.tbl td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: center; }
+.tbl .td-date { text-align: left; font-size: 12px; color: var(--text-sub); white-space: nowrap; }
+.tbl .td-lot { text-align: left; font-family: var(--font-mono); font-size: 12px; font-weight: 700; }
+.tbl tbody tr { cursor: pointer; }
+.tbl tbody tr.is-ng { background: var(--ng-row); }
+.tbl tbody tr:hover { background: var(--bg-card); }
+.tbl tbody tr.is-selected { background: var(--brand-gold-soft); }
+.tbl tbody tr.is-selected .td-date { color: var(--text-label); font-weight: 700; }
+
+/* 상세 패널 */
+.detail { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--brand-gold); border-radius: var(--radius-l); background: var(--bg-base); }
+.detail--empty { padding: 60px 20px; text-align: center; color: var(--text-sub); }
+.detail__head { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 20px; }
+.detail__close { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--bg-card); color: var(--text-sub); }
+.detail__close svg { width: 14px; height: 14px; }
+.detail__label { font-size: 11px; color: var(--text-faint); }
+.detail__lot { font-family: var(--font-mono); font-size: 18px; font-weight: 700; }
+.detail__time { margin-bottom: 8px; font-size: 12px; color: var(--text-sub); }
+.detail__sec { padding: 14px 20px; border-top: 1px solid var(--line); }
+.sec-title { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; }
+
+/* 진행 단계 (1번~3번, 비전) */
+.steps { position: relative; display: flex; }
+.steps::before { content: ""; position: absolute; top: 11px; left: 12.5%; right: 12.5%; height: 2px; background: var(--ok); }
+.step { position: relative; z-index: 1; width: 25%; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 11px; font-weight: 700; }
+.step__dot { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--ok); color: #fff; }
+.step--ng .step__dot { background: var(--ng); }
+.step--pending .step__dot { background: var(--text-faint); }
+.step__res { font-size: 10px; color: var(--ok); }
+.step__res--ng { color: var(--ng); }
+.step__res--pending { color: var(--text-sub); }
+
+/* 파트별 센서값 2열 그리드 */
+.kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 12px; }
+.kv { display: flex; align-items: baseline; gap: 10px; font-size: 11px; color: var(--text-sub); }
+.kv b { font-size: 12px; color: var(--text); }
+
+/* 비전 */
+.vision { display: flex; gap: 12px; margin-top: 10px; }
+.vision__img { flex: none; display: grid; place-items: center; width: 125px; height: 82px; border-radius: 6px; background: var(--bg-card); object-fit: cover; font-size: 11px; color: var(--text-faint); }
+.vision__reason { display: flex; flex-direction: column; gap: 6px; font-size: 11px; color: var(--text-sub); }
+.vision__reason b { font-size: 12px; font-weight: 400; color: var(--text); }
+
+.detail__comment { display: flex; flex-direction: column; gap: 6px; padding: 14px 20px; background: var(--bg-card); font-size: 12px; color: var(--text-sub); }
+.detail__comment strong { color: var(--text); }
+
+/* ---------- 실시간 수신 표시 (결과 헤더 우측) ---------- */
+.live { display: flex; align-items: center; gap: 8px; margin-left: auto; min-width: 0; font-size: 12px; font-weight: 400; }
+.live__dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--danger-dot); }
+.live__dot.is-on { background: var(--ok); animation: pulse 1.6s ease-in-out infinite; }
+.live__label { flex: none; color: var(--text-sub); }
+.live__feed { display: flex; gap: 6px; min-width: 0; overflow: hidden; }
+.live__chip { padding: 2px 8px; border-radius: 999px; background: var(--bg-control); color: var(--text-label); white-space: nowrap; }
+.live__chip--ok { background: var(--ok-bg); color: var(--ok); }
+.live__chip--ng { background: var(--ng-bg); color: var(--ng); }
+@keyframes pulse { 50% { opacity: 0.35; } }
+
+/* 새로 들어온 LOT 행: 금색에서 서서히 원래 색으로 */
+.tbl tbody tr.is-new { animation: row-flash 2.4s ease-out; }
+@keyframes row-flash { from { background: var(--brand-gold-soft); } }
+
+/* ---------- Lot 조회 표: 용접/비전 묶음 헤더 ---------- */
+.tbl--lot thead th { height: 30px; border-bottom: 0; }
+.tbl--lot thead tr:nth-child(2) th { top: 30px; height: 26px; }
+.tbl--lot .th-grp { border-bottom: 1px solid #b9b8be; }
+.tbl--lot .th-sub { font-weight: 400; color: var(--text-sub); }
+.tbl--lot .th-l { text-align: left; }
+.lot-detail { position: sticky; top: 0; }

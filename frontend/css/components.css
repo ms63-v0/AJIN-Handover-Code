@@ -1,0 +1,53 @@
+/* 여러 화면에서 재사용하는 공통 컴포넌트 */
+
+/* 판정 알약(OK/NG) - 목록/상세 공용 */
+.pill { display: inline-block; min-width: 34px; padding: 3px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; text-align: center; }
+.pill--ok { background: var(--ok-bg); color: var(--ok); }
+.pill--ng { background: var(--ng-bg); color: var(--ng); }
+.pill--pending { background: var(--bg-control); color: var(--text-sub); }
+
+/* 종합판정 배지 */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--radius-s);
+  font-size: 11px; font-weight: 700; color: #fff; }
+.badge--ok { background: var(--ok); }
+.badge--ng { background: var(--ng); }
+.badge--pending { background: var(--text-sub); }
+.badge--lg { padding: 6px 12px; font-size: 14px; }
+
+.btn--gold { height: 36px; padding: 0 20px; border-radius: var(--radius-m); background: var(--brand-gold); font-weight: 700; }
+.btn--gold:hover { filter: brightness(0.96); }
+
+.section-title { font-size: 17px; font-weight: 700; letter-spacing: -0.255px; }
+
+/* 검색 바 */
+.filter-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 15px 25px; padding: 5px 10px; background: var(--bg-control); border-radius: var(--radius-m); }
+.filter-bar__group { display: flex; flex-wrap: wrap; align-items: center; gap: 15px 25px; }
+.chip { position: relative; display: flex; align-items: center; gap: 10px; height: 38px; padding: 5px; background: var(--bg-base); border-radius: var(--radius-m); }
+.chip__label { font-weight: 700; letter-spacing: -0.225px; }
+.chip input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; font-weight: 700; }
+.chip svg { flex: none; width: 22px; height: 22px; }
+.chip--date { width: 150px; border: 1px solid var(--line); padding: 5px 8px; }
+.chip--date input { font-size: 13px; font-weight: 600; }
+/* 날짜 입력창 전체를 클릭 영역으로 (브라우저 기본 달력 아이콘은 투명 처리) */
+.chip--date input::-webkit-calendar-picker-indicator { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.chip--lot { width: 150px; }
+.seg { display: flex; gap: 10px; font-size: 14px; }
+.seg__opt { padding: 3px 9px; border-radius: 6px; color: var(--text-sub); }
+.seg__opt.is-active { background: var(--brand-gold); color: var(--text); font-weight: 700; }
+.export { display: flex; gap: 15px; padding: 10px 8px; background: var(--bg-soft); border-radius: var(--radius-m); }
+.export svg { width: 18px; height: 18px; }
+.export [data-act="pdf"] { color: #d93025; }
+.export [data-act="excel"] { color: #1d6f42; }
+
+/* ── 페이지네이션 (서버사이드 오프셋 방식) */
+.pg { display: flex; align-items: center; gap: 6px; padding: 12px 4px 4px; flex-wrap: wrap; }
+.pg__info { font-size: 12px; color: var(--text-sub); margin-right: 4px; }
+.pg__info b { color: var(--text); font-weight: 600; }
+.pg__per { font: inherit; font-size: 12px; color: var(--text); background: var(--bg-control); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 3px 6px; cursor: pointer; }
+.pg__nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.pg__btn { min-width: 30px; height: 30px; padding: 0 6px; font-size: 12px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--bg-card); color: var(--text-sub); cursor: pointer; transition: background .12s, color .12s; }
+.pg__btn:hover:not(:disabled) { background: var(--bg-control); color: var(--text); }
+.pg__btn.is-active { background: var(--brand-blue); color: #fff; border-color: var(--brand-blue); font-weight: 600; cursor: default; }
+.pg__btn.is-disabled, .pg__btn:disabled { opacity: .35; cursor: not-allowed; }
+.pg__gap { font-size: 12px; color: var(--text-faint); padding: 0 2px; line-height: 30px; }

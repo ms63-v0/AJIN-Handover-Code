@@ -1,0 +1,37 @@
+/* 다크 테마: 화면 설정의 '다크'(또는 시스템이 다크일 때) html[data-theme="dark"] 로 적용 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-base: #141416;
+  --bg-card: #1c1c1f;
+  --bg-control: #26262a;
+  --bg-soft: #18181b;
+  --bg-dim: #303036;
+  --line: #2c2c31;
+  --brand-gold-soft: #4a3d10;
+  --text: #f2f2f5;
+  --text-sub: #a1a1a9;
+  --text-faint: #6e6e77;
+  --text-label: #d8d1bb;
+  --text-link: #6aa8ff;
+  --ok: #3cbf6b;
+  --ok-bg: #143221;
+  --ng: #ff6b6b;
+  --ng-bg: #3b1717;
+  --ng-row: #221618;
+  --danger-dot: #ff5a52;
+}
+[data-theme="dark"] body { background: var(--bg-base); }
+[data-theme="dark"] .schip--yellow { background: #43360c; color: #ffd75e; }
+[data-theme="dark"] .bell-item__cat--v { background: #13294a; }
+[data-theme="dark"] .dstep__dot { background: var(--bg-dim); }
+[data-theme="dark"] .vcard--ng { border-color: #6b2a2a; }
+[data-theme="dark"] .toast { background: #2a2a2f; }
+[data-theme="dark"] .modal { background: rgba(0, 0, 0, .6); }
+[data-theme="dark"] .pop, [data-theme="dark"] .modal__box { box-shadow: 0 16px 48px rgba(0, 0, 0, .55); }
+[data-theme="dark"] .card, [data-theme="dark"] .kpi, [data-theme="dark"] .pcard, [data-theme="dark"] .camcard { box-shadow: none; }
+[data-theme="dark"] .tbl tbody tr:hover { background: #222226; }
+[data-theme="dark"] .login__panel { background: var(--bg-card); }
+[data-theme="dark"] .login__form input[type=text], [data-theme="dark"] .login__form input[type=password] { background: var(--bg-base); color: var(--text); }
+[data-theme="dark"] .tab { color: var(--text); }
+[data-theme="dark"] .btn--gold, [data-theme="dark"] .tab.is-active, [data-theme="dark"] .pchip.is-on, [data-theme="dark"] .rchip.is-on, [data-theme="dark"] .seg__opt.is-active, [data-theme="dark"] .mchip.is-on, [data-theme="dark"] .view-toggle button.is-active { color: #1d1d1f; }
+[data-theme="dark"] input[type=date] { color-scheme: dark; }

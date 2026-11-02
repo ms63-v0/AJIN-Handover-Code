@@ -1,0 +1,104 @@
+/* 반응형 레이어 (theme.css 다음에 로드). 색·문구·화면 구조는 그대로 두고
+   폭/입력 방식에 따른 크기와 배치만 조정한다. 기준:
+   ≥2560 wallboard · ≥1280 desktop(기본) · 1024~1279 laptop · 768~1023 tablet · <768 phone */
+
+/* 1) 수치 정렬: 실시간 갱신 시 자릿수가 흔들리지 않게 */
+.tbl td, .kpi__big b, .akpi b, .wcard__avg, .wcard__foot, .pg, .dbtest__val,
+.vcard__row, .acard__time, .live-at, .result-head__count { font-variant-numeric: tabular-nums; }
+
+/* 2) 표 가로 넘침: 스크롤은 표 안에서만 (페이지 전체가 옆으로 밀리지 않게) */
+.table-wrap, .wtable { max-width: 100%; overflow-x: auto; }
+
+/* 3) 1024~1279px (노트북 / 가로 태블릿)
+      사이드바 아이콘 레일, 사이드 패널은 폭만 유동(고정 폭 대신), 차트는 2열 유지 */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .sidebar { width: 72px; padding: 20px 10px; }
+  .sidebar .nav span, .logo small, .conn__text, .version, .conn__title { display: none; }
+  .logo { justify-content: center; padding: 8px; font-size: 0; }
+  .nav { justify-content: center; } .nav.is-active::before { left: -10px; }
+  .weld, .vis, .alarm, .lot-layout, .dash__body { flex-wrap: nowrap; }
+  .weld__side, .vis__side, .alarm__detail, .lot-detail, .dash__side { width: clamp(248px, 24vw, 300px); }
+  .wgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main { padding: 20px 22px; }
+  .header__date { display: none; }
+}
+
+/* 4) 768~1023px (세로 태블릿 · 현장 HMI) — 사이드 패널은 본문 아래로, 터치 타겟 확대 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .sidebar { width: 72px; padding: 16px 8px; }
+  .sidebar .nav span, .logo small, .conn__text, .version, .conn__title, .dbtest { display: none; }
+  .logo { justify-content: center; padding: 8px; font-size: 0; }
+  .nav { justify-content: center; } .nav.is-active::before { left: -8px; }
+  .weld, .vis, .alarm, .lot-layout, .dash__body { flex-wrap: wrap; }
+  .weld__side, .vis__side, .alarm__detail, .lot-detail, .dash__side { width: 100%; position: static; }
+  .wgrid { grid-template-columns: 1fr; }
+  .dash__kpis, .dash__kpis--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .main { padding: 16px; gap: 18px; }
+  .header__date { display: none; }
+}
+
+/* 5) 768px 미만 (휴대폰 · 순회 점검)
+      사이드바를 하단 고정 메뉴로 전환(엄지 영역), 모든 패널 1열 */
+@media (max-width: 767px) {
+  .app { flex-direction: column; }
+  .sidebar {
+    order: 2; width: 100%; height: auto; flex-direction: row; align-items: center; gap: 0;
+    padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+    border-right: 0; border-top: 1px solid var(--line); position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  }
+  .logo, .sidebar__spacer, .sidebar__bottom, .dbtest { display: none; }
+  .nav-list { flex-direction: row; flex: 1; gap: 0; justify-content: space-around; }
+  .nav { flex-direction: column; gap: 2px; padding: 6px 4px; min-width: 48px; min-height: 48px; justify-content: center; font-size: 11px; }
+  .nav span { display: inline !important; font-size: 11px; }
+  .nav.is-active::before { display: none; }
+  .main { order: 1; padding: 12px 12px 88px; gap: 16px; overflow: auto; }
+  .header { flex-wrap: wrap; gap: 8px; }
+  .header__title { font-size: 20px; }
+  .header__date { display: none; }
+  .weld, .vis, .alarm, .lot-layout, .dash__body { flex-wrap: wrap; }
+  .weld__side, .vis__side, .alarm__detail, .lot-detail, .dash__side { width: 100%; position: static; }
+  .wgrid, .vgrid { grid-template-columns: 1fr; }
+  .dash__kpis, .dash__kpis--3 { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .filter-bar { flex-wrap: wrap; gap: 8px; }
+  .tbl th, .tbl td { padding: 8px 6px; }
+}
+
+/* 6) 터치 기기(손가락 입력): 최소 타겟 48px, 간격 8px — 방진 장갑·순회 점검 기준 */
+@media (pointer: coarse) {
+  .pchip, .rchip, .tab, .seg__opt, .pg__btn, .now-btn, .pw-eye, .nav {
+    min-height: 48px; min-width: 48px; padding-left: 14px; padding-right: 14px;
+  }
+  .pg { gap: 8px; }
+  .pg__btn { min-width: 48px; height: 48px; }
+  .pg__per { min-height: 48px; }
+  .tbl tbody tr { min-height: 48px; }
+  .tbl td { padding-top: 10px; padding-bottom: 10px; }
+  .filter-bar { gap: 8px; }
+}
+
+/* 7) 2560px 이상 (현황판 · 대형 모니터): 전체 배율 확대 (읽기 거리 확보) */
+@media (min-width: 2560px) {
+  .app { zoom: 1.25; height: calc(100vh / 1.25); }
+}
+
+/* 8) 헤더 고정: 본문 여백을 변수로 두고, 헤더를 여백 바깥까지 전체 폭으로 늘려 고정한다.
+      스크롤된 내용이 헤더 위·좌우로 비치지 않도록 배경과 하단 구분선을 함께 둔다. */
+:root { --mp: 28px; --mb: 28px; }
+@media (min-width: 1024px) and (max-width: 1279px) { :root { --mp: 22px; --mb: 22px; } }
+@media (min-width: 768px) and (max-width: 1023px) { :root { --mp: 16px; --mb: 16px; } }
+@media (max-width: 767px) { :root { --mp: 12px; --mb: 88px; } }
+
+.main { padding: 0 var(--mp) var(--mb); }
+.header {
+  position: sticky; top: 0; z-index: 30;
+  margin: 0 calc(var(--mp) * -1);
+  padding: 14px var(--mp);
+  background: var(--bg-base);
+  border-bottom: 1px solid var(--line);
+}
+
+@media print {
+  .main { padding: 0; }
+  .header { position: static; margin: 0; padding: 0; border: 0; }
+}
