@@ -197,7 +197,7 @@ pip install -r requirements.txt
 
 ```env
 DB_BACKEND=mssql
-MSSQL_SERVER=<서버IP>,50000
+MSSQL_SERVER=<서버IP>,<PORT>
 MSSQL_DATABASE=HW_Q_DB
 MSSQL_USER=<DB접속계정>
 MSSQL_PASSWORD=<DB접속비밀번호>
@@ -544,7 +544,7 @@ ORDER BY login_time DESC;
 | `DB_BACKEND 값이 올바르지 않습니다` | 값 오타 | `mssql` 또는 `sqlite`로 정확히 입력 |
 | `Data source name not found` | ODBC Driver 18 미설치 | 3-1의 드라이버 설치 후 재시작 |
 | `Login failed for user` | DB 계정 또는 비밀번호 틀림 | `.env`의 `MSSQL_USER`, `MSSQL_PASSWORD` 재확인 (담당자에게 재발급 요청) |
-| `timeout` 또는 서버를 찾을 수 없음 | 네트워크 또는 방화벽 문제 | 사내망/VPN 연결, IP와 포트 50000 확인, 전산팀에 방화벽 확인 |
+| `timeout` 또는 서버를 찾을 수 없음 | 네트워크 또는 방화벽 문제 | 사내망/VPN 연결, IP와 포트 확인, 전산팀에 방화벽 확인 |
 | `Invalid object name 'm_line'` | 테이블이 없음 (스키마 미적용) | DB 담당자에게 `mssql_query.sql` 적용 요청 |
 | 한글이 `???` 또는 깨져 보임 | DB 문자 인코딩 차이 | `.env`에 `MSSQL_CHAR_ENCODING=cp949` 추가 (주석 없이) |
 | 로그인 화면에서 401 | 아이디 또는 비밀번호 틀림, 계정 잠금 | 계정 상태 확인 (잠금은 10분 후 자동 해제) |
