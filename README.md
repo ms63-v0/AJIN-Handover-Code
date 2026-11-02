@@ -138,7 +138,7 @@ py -c "import pyodbc; print(pyodbc.drivers())"
 
 | 필요한 것 | 누구에게 | 비고 |
 |---|---|---|
-| DB 서버 IP 주소와 포트(50000) | 전산팀 | 서버 PC에 고정 IP 확인 |
+| DB 서버 IP 주소와 포트 | 서버PC | 서버 PC에 고정 IP 확인 |
 | DB 접속 계정(`app_user` 등)과 비밀번호 | DB 담당자 | SQL 인증 계정, 읽기·쓰기 권한 |
 | 앱 로그인 계정(ID/비밀번호) | 시스템 관리자 | 화면에 들어가는 계정 (DB 접속 계정과 다름) |
 | 인증서 사용 여부 | 전산팀 | 자체 인증서면 `MSSQL_TRUST_CERT=yes` |
@@ -183,7 +183,7 @@ pip install -r requirements.txt
 | 항목 | 의미 | 값 예시 | 필수 |
 |---|---|---|---|
 | `DB_BACKEND` | 사용할 DB 종류 | `mssql` (실 DB는 반드시 이 값) | ✅ |
-| `MSSQL_SERVER` | DB 서버 주소와 포트 (쉼표로 구분) | `<서버IP>,50000` | ✅ |
+| `MSSQL_SERVER` | DB 서버 주소와 포트 (쉼표로 구분) | `<서버IP>,<HOST>` | ✅ |
 | `MSSQL_DATABASE` | 사용할 데이터베이스 이름 | `HW_Q_DB` | ✅ |
 | `MSSQL_USER` | DB 접속 계정 | `app_user` (담당자 발급) | ✅ |
 | `MSSQL_PASSWORD` | DB 접속 비밀번호 | (담당자 발급) | ✅ |
@@ -327,6 +327,184 @@ Lot 조회, 알람, 비전 검사 화면에서 PDF, Excel, CSV로 내려받을 �
 > [!IMPORTANT]
 > 기준정보를 **삭제하지 말고 사용 여부를 중지**로 바꾸세요. 과거 실적이 연결되어 있어 삭제는 막히거나 이력이 깨질 수 있습니다.
 
+## 🟡 8-1. 앱 로그인 계정 관리
+
+> 이 장은 **화면에 로그인하는 계정(앱 로그인 계정)** 을 만들고 관리하는 방법입니다.
+> `.env`에 넣는 **DB 접속 계정**과는 다른 계정입니다.
+
+| 구분 | 용도 | 어디에 저장 | 누가 관리 |
+|---|---|---|---|
+| DB 접속 계정 (`.env`의 `MSSQL_USER`) | 백엔드가 DB에 접속 | SQL Server 로그인 | DB 담당자 |
+| 앱 로그인 계정 (화면 ID/PW) | 화면에 로그인 | DB 안 `m_user` 테이블 | 시스템 관리자 |
+
+> [!CAUTION]
+> - 비밀번호, 해시 값(`scrypt$...`)은 **채팅, 메신저, 메일, 이 문서에 붙여 넣지 마세요.**
+> - 계정 정보는 발급 대장에 **ID, 이름, 역할, 발급일**만 기록합니다. 비밀번호는 기록하지 않습니다.
+> - 데모용 계정(`admin`, `operator1`)이 실 DB에 남아 있다면 **즉시 비활성화하거나 비밀번호를 바꾸세요.**
+
+### 8-1-1. 역할(role_code)
+
+| 역할 | 할 수 있는 것 |
+|---|---|
+| `ADMIN` | 기준정보 등록·수정, 알람 조치 등록, 기준정보 메뉴 사용 |
+| `MANAGER` | 알람 조치 등록 |
+| `OPERATOR` | 알람 조치 등록, 조회 |
+
+- 모든 역할이 조회 화면과 데이터 추출을 쓸 수 있습니다.
+- `VIEWER`(조회 전용) 역할은 아직 없습니다. 필요하면 개선 목록을 참고하세요.
+
+### 8-1-2. 계정 발급 절차
+
+1. **요청**: 사용자 이름, 부서, 로그인 ID, 역할을 시스템 관리자에게 전달합니다.
+2. **승인**: 관리자가 요청을 확인하고 승인합니다.
+3. **비밀번호 생성**: 아래 8-1-3 방법으로 해시를 만듭니다. 비밀번호는 **본인이 직접 입력**하거나, 발급 담당자가 본인에게 직접 전달합니다.
+4. **계정 등록**: 아래 8-1-4의 INSERT를 DB 접속 계정으로 실행합니다.
+5. **로그인 확인**: 화면에서 새 계정으로 로그인합니다.
+6. **기록**: 발급 대장에 ID, 이름, 역할, 발급일을 적습니다.
+
+### 8-1-3. 해시 만들기 (PowerShell, `app` 폴더)
+
+비밀번호는 화면에 보이지 않게 입력하고, 명령 기록에도 남지 않습니다.
+
+```powershell
+cd "C:\Users\UsersPC\Desktop\qms_mssql_\app"
+.\.venv\Scripts\Activate.ps1
+
+$sec   = Read-Host "앱 로그인 비밀번호 (8자 이상)" -AsSecureString
+$plain = (New-Object System.Net.NetworkCredential("", $sec)).Password
+$hash  = $plain | py -c "import sys; from backend.security import hash_password; print(hash_password(sys.stdin.readline().strip()))"
+Remove-Variable plain, sec
+
+$hash
+```
+
+- 입력할 때 글자가 보이지 않는 것이 정상입니다.
+- 출력된 `scrypt$...` 한 줄을 **앞뒤 공백 없이** 복사합니다. 줄이 나뉘면 로그인이 실패합니다.
+- 복사를 마치면 아래를 실행해 메모리에서도 지웁니다.
+  ```powershell
+  Remove-Variable hash
+  ```
+- 비밀번호 정책(8자 이상, 대·소문자·숫자·기호 중 3종 이상 권장)은 **운영 규칙으로 지켜야 합니다.** 프로그램이 자동으로 검사하지 않습니다.
+
+> [!NOTE]
+> 이 방법은 DB에 접속하지 않습니다. `.venv`와 `requirements.txt` 설치가 되어 있으면 어느 PC에서든 만들 수 있습니다.
+
+### 8-1-4. 계정 등록 (INSERT)
+
+DB 접속 계정으로 SQL Server Management Studio에 연결하고, **대상 DB**를 선택한 뒤 실행합니다.
+
+```sql
+USE [<DB 이름>];
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.m_user WHERE login_id = N'<로그인 ID>')
+BEGIN
+    INSERT INTO dbo.m_user
+        (login_id, password_hash, user_name, role_code, department, force_change_yn, use_yn)
+    VALUES
+        (N'<로그인 ID>', N'<8-1-3에서 만든 해시>', N'<이름>', N'<역할>', N'<부서>', N'Y', N'Y');
+END
+GO
+SELECT login_id, role_code, use_yn FROM dbo.m_user ORDER BY user_id;
+GO
+```
+
+| 자리 | 넣을 값 |
+|---|---|
+| `<로그인 ID>` | 영문 또는 숫자 ID (예: `hong.gd`) |
+| `<8-1-3에서 만든 해시>` | `scrypt$`로 시작하는 한 줄 |
+| `<역할>` | `ADMIN`, `MANAGER`, `OPERATOR` 중 하나 |
+| `<부서>`, `<이름>` | 실제 값 |
+
+- `force_change_yn`을 `Y`로 두어도 현재 프로그램은 **첫 로그인 때 비밀번호 변경을 강제하지 않습니다.** 발급 담당자가 직접 안내하세요.
+- 같은 ID가 있으면 아무것도 추가되지 않습니다. 결과 표에서 ID가 보이는지 확인하세요.
+
+> [!WARNING]
+> 쿼리를 한글 입력 상태로 직접 타이핑하면 쉼표나 따옴표가 전각 문자로 바뀌어 `156` 같은 구문 오류가 납니다. **영문 입력 상태에서 작성하거나 파일로 열어서** 실행하세요.
+
+### 8-1-5. 로그인 확인
+
+화면(`http://127.0.0.1:5173`)에서 새 계정으로 로그인합니다.
+
+- 성공하면 대시보드가 열립니다.
+- `ADMIN`이면 왼쪽 메뉴에 **기준정보 관리**가 보입니다.
+- `OPERATOR`가 주소창에 `#/admin`을 입력하면 대시보드로 이동합니다. 정상입니다.
+
+### 8-1-6. 비밀번호 변경
+
+비밀번호 변경 화면은 없습니다. 아래 순서로 처리합니다.
+
+1. 8-1-3 방법으로 새 해시를 만듭니다.
+2. DB 접속 계정으로 아래를 실행합니다.
+
+```sql
+UPDATE dbo.m_user
+   SET password_hash = N'<새 해시>',
+       password_changed_at = DATEADD(HOUR, 9, SYSUTCDATETIME()),
+       updated_at = DATEADD(HOUR, 9, SYSUTCDATETIME())
+ WHERE login_id = N'<로그인 ID>';
+```
+
+- `password_changed_at`과 `updated_at`은 한국 시간 기준입니다. 다른 시간 함수를 쓰지 마세요.
+
+### 8-1-7. 잠금 해제
+
+비밀번호를 5회 틀리면 10분 동안 잠깁니다. 시간이 지나면 자동으로 풀립니다. 바로 풀어야 할 때만 아래를 실행합니다.
+
+```sql
+UPDATE dbo.m_user
+   SET failed_login_count = 0, locked_until = NULL
+ WHERE login_id = N'<로그인 ID>';
+```
+
+### 8-1-8. 계정 사용 중지 (퇴직·전보)
+
+**계정을 삭제하지 마세요.** 과거 로그인 이력과 조치 기록이 `m_user`를 참조하고 있어 삭제가 막히거나 이력이 깨집니다. 대신 사용 중지합니다.
+
+```sql
+UPDATE dbo.m_user
+   SET use_yn = 'N', updated_at = DATEADD(HOUR, 9, SYSUTCDATETIME())
+ WHERE login_id = N'<로그인 ID>';
+```
+
+- 사용 중지된 계정은 로그인할 수 없습니다.
+- 다시 쓰려면 `use_yn`을 `'Y'`로 바꿉니다.
+
+### 8-1-9. 로그인 이력 확인
+
+로그인 실패 원인은 `t_user_login_history` 테이블에 기록됩니다.
+
+```sql
+SELECT TOP 50 login_id, login_result, login_time, ip_address
+FROM dbo.t_user_login_history
+ORDER BY login_time DESC;
+```
+
+| 기록 값 | 의미 | 조치 |
+|---|---|---|
+| `FAIL_NO_USER` | ID가 없거나 사용 중지됨 | ID 오타 확인, `use_yn` 확인 |
+| `FAIL_PW` | 비밀번호 불일치 | 비밀번호 재확인, 필요하면 8-1-6 |
+| `FAIL_LOCKED` | 5회 실패로 잠김 | 10분 대기 또는 8-1-7 |
+
+### 8-1-10. 자주 막히는 경우
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 로그인 시 401 | ID 또는 비밀번호 불일치, 사용 중지 | 8-1-9로 실패 원인 확인 |
+| 해시를 넣었는데 로그인이 안 됨 | 해시 줄이 나뉘거나 앞뒤 공백이 섞임 | 해시를 다시 복사하여 넣기 |
+| 로그인 직후 바로 로그아웃 | 로그인 키 파일이 바뀜 | 다시 로그인 (9장) |
+| 기준정보 메뉴가 안 보임 | `ADMIN`이 아니거나 사이드바가 이전 계정 그대로 | 로그아웃 후 다시 로그인, Ctrl+F5 |
+| INSERT 후에도 목록에 없음 | 다른 DB에 실행함 | `USE` 문의 DB 이름 확인 |
+| `156` 구문 오류 | 전각 기호로 입력됨 | 영문 입력 상태에서 다시 작성 |
+
+### 8-1-11. 점검 체크리스트
+
+- [ ] 발급 요청과 승인 기록이 있다
+- [ ] 비밀번호는 본인이 입력했거나 본인에게 직접 전달했다
+- [ ] 역할이 요청 내용과 같다 (`ADMIN` 발급은 별도 승인)
+- [ ] 발급 대장에 ID, 이름, 역할, 발급일을 기록했다 (비밀번호 제외)
+- [ ] 화면에서 새 계정으로 로그인이 된다
+- [ ] 실 DB에 데모 계정(`admin`, `operator1`)이 없거나 비활성화되었다
+- [ ] 퇴직자 계정은 삭제하지 않고 사용 중지했다
 ---
 
 ## 🟡 9. 로그인과 보안
