@@ -140,7 +140,6 @@ py -c "import pyodbc; print(pyodbc.drivers())"
 |---|---|---|
 | DB 서버 IP 주소와 포트 | 서버PC | 서버 PC에 고정 IP 확인 |
 | DB 접속 계정(`app_user` 등)과 비밀번호 | DB 담당자 | SQL 인증 계정, 읽기·쓰기 권한 |
-| 앱 로그인 계정(ID/비밀번호) | 시스템 관리자 | 화면에 들어가는 계정 (DB 접속 계정과 다름) |
 | 인증서 사용 여부 | 전산팀 | 자체 인증서면 `MSSQL_TRUST_CERT=yes` |
 
 ---
