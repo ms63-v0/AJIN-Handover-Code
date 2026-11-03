@@ -54,7 +54,7 @@ git clone https://github.com/ms63-v0/AJIN-Handover-Code.git
 
 **Git이 없을 때**
 
-1. [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code)에서 **Code → Download ZIP**을 누릅니다.
+1. **Code → Download ZIP**을 누릅니다.
 2. 압축을 풉니다. 폴더 이름은 `AJIN-Handover-Code-main`이 됩니다.
 
 받은 폴더 안에 `backend`, `frontend`, `requirements.txt`, `serve_ui.py`가 바로 보이면 맞습니다. 이 폴더를 이하 **프로젝트 폴더**라고 부릅니다.
