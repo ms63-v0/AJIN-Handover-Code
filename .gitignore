@@ -1,0 +1,16 @@
+# 비밀정보 · 실행 환경별 파일
+.env
+.env.*
+data/
+.venv/
+venv/
+
+# Python 캐시
+__pycache__/
+*.pyc
+
+# 편집기·OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
