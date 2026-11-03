@@ -198,6 +198,112 @@ python serve_ui.py
 
 ---
 
+앱 로그인 계정 관리
+
+이 섹션은 화면에 로그인하는 계정(m_user 테이블)을 다룹니다. DB에 접속하는 계정(.env의 MSSQL_USER)과는 다릅니다.
+
+[!IMPORTANT]
+계정 추가와 비밀번호 변경은 DB 접속 권한이 있는 계정(PPT의 DB 접속 계정)으로 SQL Server Management Studio(SSMS)에서 실행합니다. 비밀번호 원문과 해시 값은 채팅, 메신저, 메일, 문서에 남기지 마세요.
+
+역할
+역할	기준정보 관리	알람 확인·조치	조회·내보내기
+ADMIN	가능	가능	가능
+MANAGER	불가	가능	가능
+OPERATOR	불가	가능	가능
+
+알람 조치 등록은 역할과 관계없이 로그인한 누구나 할 수 있습니다. 조회 전용 역할은 아직 없습니다.
+
+1. 비밀번호 해시 만들기
+
+비밀번호는 DB에 해시 값으로만 저장합니다. 해시는 프로젝트 폴더에서 만듭니다.
+
+powershell
+cd "<프로젝트 폴더>"
+.\.venv\Scripts\Activate.ps1
+
+$sec   = Read-Host "앱 로그인 비밀번호 (8자 이상)" -AsSecureString
+$plain = (New-Object System.Net.NetworkCredential("", $sec)).Password
+$hash  = $plain | py -c "import sys; from backend.security import hash_password; print(hash_password(sys.stdin.readline().strip()))"
+Remove-Variable plain, sec
+
+$hash
+입력할 때 글자가 보이지 않는 것이 정상입니다.
+출력된 scrypt$로 시작하는 한 줄을 앞뒤 공백 없이 복사합니다. 줄이 나뉘면 로그인이 실패합니다.
+다 쓰면 메모리에서 지웁니다: Remove-Variable hash
+
+비밀번호 규칙(8자 이상, 대문자·소문자·숫자·기호 중 3종 이상 권장)은 프로그램이 검사하지 않으므로 운영 규칙으로 지킵니다. 비밀번호는 계정을 쓸 본인이 직접 입력하는 것을 원칙으로 합니다.
+
+2. 계정 추가
+
+SSMS에서 PPT의 DB 접속 계정으로 연결하고, 대상 DB를 HW_Q_DB로 선택한 뒤 실행합니다. 영문 입력 상태에서 작성하세요. 한글 상태에서 쓰면 쉼표와 따옴표가 전각으로 바뀌어 구문 오류(156)가 납니다.
+
+sql
+USE [HW_Q_DB];
+GO
+IF NOT EXISTS (SELECT 1 FROM dbo.m_user WHERE login_id = N'<로그인ID>')
+BEGIN
+    INSERT INTO dbo.m_user
+        (login_id, password_hash, user_name, role_code, department, force_change_yn, use_yn)
+    VALUES
+        (N'<로그인ID>', N'<1번에서 만든 해시>', N'<이름>', N'<ADMIN|MANAGER|OPERATOR>', N'<부서>', N'N', N'Y');
+END
+GO
+SELECT login_id, role_code, use_yn FROM dbo.m_user ORDER BY user_id;
+자리	넣을 값
+<로그인ID>	영문 또는 숫자 (예: hong.gd)
+<1번에서 만든 해시>	scrypt$로 시작하는 한 줄
+<ADMIN|MANAGER|OPERATOR>	셋 중 하나만
+같은 ID가 이미 있으면 추가되지 않습니다. 마지막 결과에 ID가 보이는지 확인하세요.
+이 시스템은 첫 로그인 때 비밀번호 변경을 강제하지 않습니다.
+3. 로그인 확인
+
+http://127.0.0.1:5173에서 새 계정으로 로그인합니다. ADMIN이면 "기준정보 관리" 메뉴가 보여야 합니다.
+
+4. 비밀번호 변경
+
+1번으로 새 해시를 만든 뒤 SSMS에서 실행합니다.
+
+sql
+UPDATE dbo.m_user
+   SET password_hash = N'<새 해시>',
+       password_changed_at = DATEADD(HOUR, 9, SYSUTCDATETIME()),
+       updated_at = DATEADD(HOUR, 9, SYSUTCDATETIME())
+ WHERE login_id = N'<로그인ID>';
+
+시간 값은 반드시 DATEADD(HOUR, 9, SYSUTCDATETIME())로 씁니다. 한국 시간으로 저장하기 위해서입니다.
+
+5. 잠금 해제
+
+비밀번호를 5번 틀리면 10분 동안 잠깁니다. 10분이 지나면 자동으로 풀리며, 바로 풀어야 할 때만 실행합니다.
+
+sql
+UPDATE dbo.m_user
+   SET failed_login_count = 0, locked_until = NULL
+ WHERE login_id = N'<로그인ID>';
+6. 퇴사·전보 처리
+
+계정을 삭제하지 말고 사용 중지합니다. 과거 기록이 이 계정을 참조하고 있을 수 있습니다.
+
+sql
+UPDATE dbo.m_user
+   SET use_yn = N'N', updated_at = DATEADD(HOUR, 9, SYSUTCDATETIME())
+ WHERE login_id = N'<로그인ID>';
+
+다시 사용하려면 use_yn을 N'Y'로 바꿉니다.
+
+7. 로그인 실패 원인 확인
+sql
+SELECT TOP 50 attempted_login_id, login_result, login_time
+FROM dbo.t_user_login_history
+ORDER BY login_time DESC;
+login_result	뜻	조치
+SUCCESS	성공	-
+FAIL_NO_USER	ID가 없거나 사용 중지	ID 오타, 사용 여부 확인
+FAIL_PW	비밀번호 불일치	비밀번호 재확인, 필요하면 4번
+FAIL_LOCKED	5회 실패로 잠김	10분 대기 또는 5번
+
+---
+
 ## 다음부터 실행할 때
 
 설치(1~6단계)는 한 번만 하면 됩니다. 이후에는 아래만 반복합니다.
