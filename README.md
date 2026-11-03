@@ -80,7 +80,7 @@ Get-ChildItem
 
 ```powershell
 py -m venv .venv
-.\.venv\Scripts\Activate.ps1
+.venv\Scripts\Activate
 ```
 
 프롬프트 맨 앞에 `(.venv)`가 보이면 성공입니다.
