@@ -19,7 +19,7 @@ def path(font,text,x,y,size,track=0):
         cx+=hmtx[g][0]*s+track
     return pen.getCommands(), cx-x
 W,H=960,260
-TITLE="AJIN HW 품질관리시스템"; SUB="용접·비전 품질 데이터를 한곳에서 추적합니다"
+TITLE="AJIN HW 품질관리시스템"; SUB="용접·비전 품질 데이터 조회·관리"
 def make(bg,stroke,ct,cs,acc,name):
     t,tw=path(BOLD,TITLE,56,142,72,-0.6)
     s,sw=path(REG,SUB,56,204,36)
