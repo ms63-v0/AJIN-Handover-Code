@@ -7,226 +7,453 @@
 
 용접·비전 품질 데이터 조회·관리
 
-용접·비전 공정의 LOT, 용접 결과, 센서 값, 비전 검사, 알람, 기준정보를 조회하고 관리하는 사내 웹 시스템입니다. 데이터는 사내 MSSQL 데이터베이스 `HW_Q_DB`에 저장되며, 설비 데이터는 PLC → Kepware → DB 경로로 들어옵니다.
+이 저장소를 **Windows PC에 내려받아 설치하고 실행하는 방법**과 **코드 구조**를 설명합니다. 시스템 설명, DB 구조, 접속 정보와 계정은 인수인계 PPT에 있습니다.
 
-**빠른 이동**: [빠른 시작](#빠른-시작) · [문서 안내](#문서-안내) · [시스템 구성](#시스템-구성과-처리-흐름) · [알려진 문제](#알려진-문제와-제약) · [인계 기준과 담당](#인계-기준과-담당)
+**빠른 이동**: [설치와 실행](#설치와-실행) · [다음부터 실행할 때](#다음부터-실행할-때) · [문제 해결](#문제-해결) · [코드 구조](#코드-구조)
 
 > [!IMPORTANT]
-> **현재 상태 (2026-11-09 인계 기준)**: PLC ↔ Kepware 연결과 Kepware → DB 전송은 구현되었고, **센서 ↔ PLC 연결이 남아 있습니다.** 센서부터 화면까지의 값은 아직 검증되지 않았으므로 화면의 공정 값과 알람을 현재 설비 상태로 판단하지 마세요. 현재는 실행 PC 1대에서만 접속할 수 있습니다(`127.0.0.1`).
+> DB 서버 주소, DB 계정·비밀번호, 앱 로그인 계정은 **이 저장소에 없습니다.** 인수인계 PPT를 보고 직접 입력합니다. 입력한 값은 저장소·메신저·메일에 올리지 마세요.
+
+### PPT에서 볼 곳
+
+| 필요한 정보 | 사용하는 단계 | PPT 쪽 |
+|---|---|---|
+| DB 서버 주소·포트, DB 접속 계정·비밀번호, 인증서 옵션 | [6단계 `.env` 만들기](#6단계-env-만들기) | `<기입>` |
+| 앱 로그인 계정 | [8단계 실행 확인](#8단계-실행-확인) | `<기입>` |
+| 시스템 구성, 화면 설명 | 참고 | `<기입>` |
+| DB 테이블·칼럼 설명 | 참고 | `<기입>` |
 
 ---
 
-## 시스템 목적과 범위
+## 설치와 실행
 
-용접 공정의 기준정보를 관리하고, LOT·용접·센서·비전 검사 결과와 알람 이력을 조회하며, 알람 조치를 기록합니다. 사용자는 현장 운영자(OPERATOR), 관리자(MANAGER), 시스템 관리자(ADMIN)입니다.
+처음 설치할 때 1단계부터 8단계까지 순서대로 진행합니다. 모든 명령은 **PowerShell**에서 실행합니다.
 
-| 구분 | 이 시스템이 하는 일 | 이 시스템이 하지 않는 일 (담당) |
-|---|---|---|
-| 데이터 수집 | 없음 (DB를 읽음) | 설비 데이터를 DB에 기록 (Kepware, 설비 담당) |
-| 조회·출력 | 대시보드, 용접·비전·Lot·알람 조회, PDF·Excel·CSV 출력 | 설비 제어, PLC 프로그램 (설비 담당) |
-| 기록 | 로그인 이력, 기준정보 등록·수정, 알람 확인·조치 | LOT·용접·센서·비전·알람의 발생 기록 (Kepware) |
-| DB·인프라 | 테이블 읽기·쓰기 | 스키마 변경, 백업·복원 (DB 담당) · 서버, 네트워크 (전산팀) |
+### 0단계. 준비물 확인
 
-전체 책임 범위는 [인수인계 현황 1-1](docs/handover.md)에 있습니다.
+| 항목 | 요구 사항 | 확인 명령 | 정상 결과 |
+|---|---|---|---|
+| 운영체제 | Windows 10 이상 | - | - |
+| Python | 3.10 이상, 설치 시 **"Add python.exe to PATH" 체크** | `py --version` | `Python 3.10` 이상 |
+| ODBC 드라이버 | ODBC Driver 18 for SQL Server (Microsoft 공식 사이트) | `Get-OdbcDriver -Name "ODBC Driver 18 for SQL Server"` | 드라이버 정보가 출력됨 |
+| Git | 선택 (없으면 1단계에서 ZIP으로 받기) | `git --version` | 버전이 출력됨 |
+| 네트워크 | 사내망 또는 VPN으로 DB 서버에 접근 가능 | - | 전산팀 확인 |
 
-## 주요 기능
+ODBC 확인 명령에서 아무것도 나오지 않으면 드라이버가 없는 것입니다. 드라이버를 설치한 뒤 PowerShell을 다시 여세요.
 
-| 화면 | 기능 | 사용 역할 |
-|---|---|---|
-| 대시보드 | 생산량, 합격률, 사이클 타임, 생산·불량 추이, 불량 유형 분포, 최근 알람 | 모든 역할 |
-| 용접 현황 | 파트별 센서 값 그래프·표, 레시피 기준(UCL·LCL) 이탈, 최근 용접 알람 (최대 7일) | 모든 역할 |
-| 비전 검사 현황 | 검사 결과·이미지, 불량 유형 분포, 카메라 상태 (최대 31일) | 모든 역할 |
-| Lot 조회 | LOT별 용접·비전 판정과 상세 값 (최대 31일) | 모든 역할 |
-| 알람 이력 조회 | 알람 목록·상세·표준 조치 가이드, 확인, 조치 등록 (최대 31일) | 모든 역할 |
-| 기준정보 관리 | 라인, 공정, 설비, 용접부위, 파라미터, 레시피 등록·수정 | ADMIN |
+### 1단계. 소스 받기
 
-용접·비전·Lot·알람 화면은 PDF·Excel·CSV로 내려받을 수 있습니다. 화면별 사용법은 [사용자 설명서](docs/user-guide.md)에 있습니다.
-
-## 시스템 구성과 처리 흐름
-
-```mermaid
-flowchart LR
-    S["센서"] -. "미연결" .-> P["PLC"]
-    P --> K["Kepware"]
-    K -->|"설비 데이터 기록"| D[("MSSQL<br/>HW_Q_DB")]
-    W["브라우저"] -->|"화면 파일"| U["UI 서버<br/>serve_ui.py :5173"]
-    W -->|"API 요청"| B["백엔드 FastAPI<br/>:8000"]
-    B -->|"조회 · 일부 기록"| D
-```
-
-| 구간 | 상태 | 담당 |
-|---|---|---|
-| 센서 ↔ PLC | 미연결 (남은 연동 작업) | 설비 담당 |
-| PLC ↔ Kepware | 연결 완료 | 설비 담당 |
-| Kepware → DB | 전송 구현 완료 · 센서 연결 후 값 검증 필요 | 설비 담당 |
-| 브라우저 ↔ 백엔드 ↔ DB | 동작 확인 | 프로젝트 담당 |
-
-| 쓰는 주체 | 기록하는 테이블 |
-|---|---|
-| Kepware | `t_lot`, `t_loading_event`, `t_weld_event`, `t_sensor_reading`, `t_vision_inspection`, `t_vision_inspection_detail`, `t_vision_image`, `t_alarm_event`(발생) |
-| 백엔드 | `m_user`·`t_user_login_history`(로그인), 기준정보 `m_` 테이블 7개(ADMIN), `t_alarm_event`(확인·해결)·`t_alarm_action`(조치) |
-| 관리자 (SQL) | `m_user` 발급·변경, `m_product`, `m_weld_machine`, `m_machine_spec` |
-
-로그인하지 않으면 업무 API는 401을 반환합니다. 요청 흐름과 코드 위치, 판정·알람 규칙은 [개발 가이드](docs/development.md)에 있습니다.
-
-<details>
-<summary>저장소 구조</summary>
-
-```text
-.
-├─ backend/                 API 서버 (main.py 진입점, routers/ 화면별 API)
-├─ frontend/                화면 (index.html 진입점, js/, css/)
-├─ docs/                    인수인계 문서
-│  ├─ setup.md              설치·실행 가이드
-│  ├─ user-guide.md         사용자 설명서
-│  ├─ development.md        개발 가이드
-│  ├─ operations.md         운영·장애 대응 가이드
-│  ├─ release.md            변경·배포·롤백
-│  ├─ handover.md           인수인계 현황
-│  ├─ legacy-code-readme.md 이전 코드 설명서 (보관용)
-│  └─ assets/               README 배너 이미지
-├─ serve_ui.py              화면 서버 (:5173)
-├─ requirements.txt         Python 패키지 목록
-├─ mssql_query.sql          DB 테이블 생성 스크립트
-├─ test.sql                 개발용 테스트 데이터 (실 DB 실행 금지)
-├─ start_all.sh, stop_all.sh  개발용 Codespaces 스크립트 (실 DB 미사용)
-├─ .gitignore               저장소 제외 목록 (.env, .venv, data/)
-└─ README.md                문서 허브 (이 문서)
-```
-
-저장소에 없는 것: `.env`(직접 작성), `data/.secret`(자동 생성), `.venv`(설치 시 생성). 파일별 역할은 [개발 가이드 5장](docs/development.md)에 있습니다.
-
-</details>
-
-## 빠른 시작
-
-Windows 10 이상의 PowerShell 기준입니다. 상세 절차와 오류 대응은 [설치·실행 가이드](docs/setup.md)를 보세요.
-
-### 준비
-
-| 항목 | 요구 사항 |
-|---|---|
-| Python | 3.10 이상 (`py --version`) |
-| ODBC 드라이버 | ODBC Driver 18 for SQL Server |
-| 네트워크 | 사내망 또는 VPN으로 DB 서버 포트 접근 |
-| 미리 받을 정보 | DB 서버 주소·포트(전산팀), DB 접속 계정(DB 담당, `sa` 아님), 앱 로그인 계정(시스템 관리자) |
-
-DB 계정·비밀번호·서버 주소는 담당자에게 별도 경로로 받으며, 저장소·문서·메신저에 적지 않습니다.
-
-### 1. 설치 (처음 한 번)
+**Git이 있을 때**
 
 ```powershell
+cd $HOME\Desktop
 git clone https://github.com/ms63-v0/AJIN-Handover-Code.git
-cd AJIN-Handover-Code
+```
+
+바탕화면에 `AJIN-Handover-Code` 폴더가 생깁니다.
+
+**Git이 없을 때**
+
+1. [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code)에서 **Code → Download ZIP**을 누릅니다.
+2. 압축을 풉니다. 폴더 이름은 `AJIN-Handover-Code-main`이 됩니다.
+
+받은 폴더 안에 `backend`, `frontend`, `requirements.txt`, `serve_ui.py`가 바로 보이면 맞습니다. 이 폴더를 이하 **프로젝트 폴더**라고 부릅니다.
+
+### 2단계. 프로젝트 폴더에서 PowerShell 열기
+
+```powershell
+cd "$HOME\Desktop\AJIN-Handover-Code"
+```
+
+ZIP으로 받았다면 실제 압축을 푼 경로로 바꿉니다. 탐색기에서 프로젝트 폴더를 연 뒤 주소창에 `powershell`을 입력하고 Enter를 눌러도 그 위치에서 열립니다.
+
+확인:
+
+```powershell
+Get-ChildItem
+```
+
+`backend`, `frontend`, `requirements.txt`, `serve_ui.py`가 목록에 보여야 합니다.
+
+### 3단계. 가상환경 만들고 켜기
+
+```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
+```
+
+프롬프트 맨 앞에 `(.venv)`가 보이면 성공입니다.
+
+**"스크립트 실행이 비활성화되어 있습니다" 오류가 나면** 아래를 한 번 실행한 뒤 `Activate.ps1`을 다시 실행합니다. 현재 사용자에게만 적용됩니다.
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+**PowerShell 창을 새로 열 때마다 `.\.venv\Scripts\Activate.ps1`을 다시 실행해야 합니다.** `(.venv)`가 없는 상태에서 4·7단계를 하면 패키지가 엉뚱한 곳에 설치되거나 실행이 실패합니다.
+
+### 4단계. 패키지 설치
+
+```powershell
 python -m pip install -r requirements.txt
 ```
 
-`Activate.ps1`에서 "스크립트 실행이 비활성화되어 있습니다" 오류가 나면 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`를 한 번 실행한 뒤 다시 켭니다. 창을 새로 열 때마다 가상환경을 다시 켜야 합니다.
+설치 확인:
 
-### 2. `.env` 작성
+```powershell
+python -c "import fastapi, uvicorn, pyodbc, openpyxl, reportlab, PIL; print('OK')"
+```
 
-> [!CAUTION]
-> **`.env`는 저장소에 없고 견본도 제공하지 않으므로 직접 만듭니다.** 비밀번호가 들어가므로 저장소에 올리지 마세요. **`DB_BACKEND` 줄이 없으면 오류 없이 SQLite(개발용) 모드로 켜집니다.** 아래 형식 그대로 작성하고, 값 뒤에 주석·따옴표·공백을 넣지 마세요.
+`OK`가 출력되면 성공입니다.
+
+### 5단계. `data` 폴더 만들기
+
+```powershell
+New-Item -ItemType Directory -Force -Path data
+```
+
+> [!IMPORTANT]
+> **이 단계를 빠뜨리면 로그인할 때 오류가 납니다.** 로그인 서명 키(`data/.secret`)는 처음 로그인할 때 자동으로 만들어지지만, 프로그램이 `data` 폴더를 만들지는 않습니다. `data` 폴더는 저장소에 올리지 않으므로(`.gitignore`) 새로 받을 때마다 직접 만들어야 합니다.
+
+### 6단계. `.env` 만들기
+
+`.env`는 DB 접속 정보를 적는 파일입니다. **프로젝트 폴더 바로 아래**(`backend` 폴더와 같은 위치)에 둡니다.
 
 ```powershell
 New-Item -Path .env -ItemType File
 notepad .env
 ```
 
+메모장에 아래 내용을 붙여 넣고, `<...>` 부분을 PPT의 값으로 바꾼 뒤 저장합니다.
+
 ```ini
 DB_BACKEND=mssql
-MSSQL_SERVER=<서버IP>,<포트>
+MSSQL_SERVER=<서버주소>,<포트>
 MSSQL_DATABASE=HW_Q_DB
 MSSQL_USER=<DB접속계정>
 MSSQL_PASSWORD=<DB접속비밀번호>
 MSSQL_DRIVER=ODBC Driver 18 for SQL Server
-MSSQL_TRUST_CERT=<전산팀 안내값>
+MSSQL_TRUST_CERT=<yes 또는 no>
 ```
 
-한글이 깨질 때만 `MSSQL_CHAR_ENCODING=cp949`를 추가합니다. 탐색기에서 만들면 `.env.txt`로 저장될 수 있으니 위 명령을 사용하세요.
+| 항목 | 넣을 값 |
+|---|---|
+| `DB_BACKEND` | `mssql` 그대로 |
+| `MSSQL_SERVER` | 서버 주소와 포트를 **쉼표**로 구분 (PPT) |
+| `MSSQL_DATABASE` | `HW_Q_DB` 그대로 |
+| `MSSQL_USER`, `MSSQL_PASSWORD` | DB 접속 계정 (PPT, `sa` 사용 금지) |
+| `MSSQL_DRIVER` | `ODBC Driver 18 for SQL Server` 그대로 |
+| `MSSQL_TRUST_CERT` | PPT 안내값 |
+| `MSSQL_CHAR_ENCODING` | 한글이 깨질 때만 `MSSQL_CHAR_ENCODING=cp949` 한 줄 추가 |
 
-### 3. 실행 (PowerShell 창 2개, 모두 `(.venv)` 상태)
+> [!CAUTION]
+> - **`DB_BACKEND=mssql` 줄이 빠지면 오류 없이 개발용(SQLite) 모드로 켜집니다.** 8단계에서 반드시 확인하세요.
+> - 값 뒤에 설명(`# ...`), 따옴표, `=` 앞뒤 공백을 넣지 마세요. 설명까지 값으로 읽힙니다. 설명은 줄 맨 앞에 `#`을 붙여 따로 씁니다.
+> - 탐색기에서 새 파일로 만들면 `.env.txt`로 저장되어 읽히지 않습니다. 위 명령을 사용하세요.
+> - `.env`는 `.gitignore`에 등록되어 있어 저장소에 올라가지 않습니다. 압축해서 전달하거나 메신저에 붙여 넣지 마세요.
+
+저장 후 확인 (비밀번호는 출력되지 않습니다):
 
 ```powershell
-# 창 1: 백엔드
+Get-Content .env | Select-String "DB_BACKEND|MSSQL_SERVER|MSSQL_DATABASE|MSSQL_USER|MSSQL_DRIVER|MSSQL_TRUST_CERT"
+```
+
+### 7단계. 실행
+
+PowerShell 창을 **두 개** 엽니다. 두 창 모두 프로젝트 폴더로 이동한 뒤 `.\.venv\Scripts\Activate.ps1`로 `(.venv)` 상태를 만들고 실행합니다.
+
+**창 1: 백엔드 (데이터 처리)**
+
+```powershell
+python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+```
+
+`Uvicorn running on http://127.0.0.1:8000`이 보이면 성공입니다. 이 창은 닫지 않습니다.
+
+**창 2: 화면 서버**
+
+```powershell
+python serve_ui.py
+```
+
+`UI 서버: http://127.0.0.1:5173`이 보이면 성공입니다. 이 창도 닫지 않습니다.
+
+### 8단계. 실행 확인
+
+브라우저(Chrome 또는 Edge)에서 차례로 확인합니다.
+
+| 순서 | 주소·동작 | 정상 결과 |
+|---|---|---|
+| 1 | `http://127.0.0.1:8000/health` | `{"status":"ok","backend":"mssql"}` |
+| 2 | `http://127.0.0.1:5173` | 로그인 화면 |
+| 3 | PPT의 앱 로그인 계정으로 로그인 | 대시보드 표시 |
+| 4 | 왼쪽 메뉴 6개를 차례로 누름 | 각 화면이 열림 (ADMIN 계정만 "기준정보 관리" 보임) |
+
+> [!WARNING]
+> 1번 결과에 `"backend":"sqlite"`가 보이면 **실 DB가 아닌 개발용 모드**입니다. 창 1을 `Ctrl + C`로 끄고 `.env`의 `DB_BACKEND=mssql` 줄과 파일 이름(`.env.txt`가 아닌지)을 확인한 뒤 다시 실행하세요.
+
+화면 값이 비어 있어도 고장이 아닐 수 있습니다. 센서 ↔ PLC 연결 전이라 설비 데이터가 일부만 들어오거나 없을 수 있습니다. 조회 기간을 먼저 확인하세요.
+
+**종료**: 각 창에서 `Ctrl + C`를 누릅니다.
+
+---
+
+## 다음부터 실행할 때
+
+설치(1~6단계)는 한 번만 하면 됩니다. 이후에는 아래만 반복합니다.
+
+```powershell
+# 창 1
+cd "<프로젝트 폴더>"
+.\.venv\Scripts\Activate.ps1
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
 ```powershell
-# 창 2: 화면
+# 창 2
+cd "<프로젝트 폴더>"
+.\.venv\Scripts\Activate.ps1
 python serve_ui.py
 ```
 
-### 4. 실행 확인 (매번)
+그다음 `http://127.0.0.1:8000/health`에서 `"backend":"mssql"`을 확인하고 `http://127.0.0.1:5173`에 접속합니다.
 
-| 순서 | 확인 | 정상 결과 |
+현재 구성은 **실행한 PC에서만 접속**할 수 있습니다(`127.0.0.1`). 다른 PC에서 접속하려면 서버 주소, 방화벽, 허용 주소 설정을 바꿔야 합니다([코드 구조 > 다른 PC에서 접속하려면](#다른-pc에서-접속하려면)).
+
+---
+
+## 문제 해결
+
+| 증상 | 원인 | 해결 |
 |---|---|---|
-| 1 | `http://127.0.0.1:8000/health` | `{"status": "ok", "backend": "mssql"}` |
-| 2 | `http://127.0.0.1:5173` | 로그인 화면 |
-| 3 | 앱 계정으로 로그인 | 대시보드 표시 |
+| `py`를 찾을 수 없음 | Python 미설치 또는 PATH 미등록 | Python 재설치 시 "Add python.exe to PATH" 체크 |
+| `(.venv)`가 안 보임 | 가상환경을 켜지 않음 | `.\.venv\Scripts\Activate.ps1` |
+| 스크립트 실행이 비활성화됨 | PowerShell 실행 정책 | `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` |
+| `No module named 'fastapi'` 또는 `'pyodbc'` | 가상환경 밖에서 실행했거나 설치 누락 | `(.venv)` 상태에서 4단계 다시 실행 |
+| 로그인할 때 500 오류, 창 1에 `FileNotFoundError ... data\.secret` | `data` 폴더 없음 | 5단계 실행 후 다시 로그인 |
+| `.env에 다음 값이 필요합니다` | 필수 항목 누락·빈 값 | 6단계 표의 항목 확인 |
+| `DB_BACKEND 값이 올바르지 않습니다` | 오타 | `DB_BACKEND=mssql` |
+| `/health`에 `"backend":"sqlite"` | `DB_BACKEND` 줄 없음, `.env.txt`로 저장됨, 파일 위치가 틀림 | 6단계 확인 후 창 1 재실행 |
+| `.env`를 고쳤는데 반영되지 않음 | Windows 환경변수에 같은 이름(`MSSQL_USER` 등)이 이미 있으면 그 값이 우선 | 시스템 환경변수 확인, 또는 창 1 재실행 |
+| `Data source name not found` | ODBC Driver 18 미설치 | 0단계 드라이버 설치 후 PowerShell 재시작 |
+| `Login failed for user` | DB 계정·비밀번호 오류 | `.env`의 `MSSQL_USER`, `MSSQL_PASSWORD`를 PPT와 대조 |
+| `Cannot open database` | DB 이름 오류 | `MSSQL_DATABASE=HW_Q_DB` |
+| 서버를 찾을 수 없음, 시간 초과 | 사내망·VPN 미연결, 주소·포트 오류, 방화벽 | 연결 상태와 `MSSQL_SERVER` 확인, 전산팀에 방화벽 확인 |
+| 한글이 `???`로 표시 | DB 문자 인코딩 차이 | `.env`에 `MSSQL_CHAR_ENCODING=cp949` 추가 후 창 1 재실행 |
+| 로그인 화면에서 401 | ID·비밀번호 불일치, 사용 중지, 5회 실패 잠금(10분) | 계정 확인, 잠금은 10분 후 자동 해제 |
+| 포트 8000 또는 5173 사용 중 | 이전 실행이 남아 있음 | 이전 창을 `Ctrl + C`로 종료 후 재실행 |
+| 화면이 예전 그대로 | 브라우저 캐시 | `Ctrl + F5` |
+| 500 오류 또는 "서버 처리 중 오류" | 백엔드 내부 오류 | 창 1의 빨간 오류 전문과 시각을 기록해 담당자에게 전달 (비밀번호·주소는 가림) |
 
-**`/health`에 `"backend": "sqlite"`가 보이면 실 DB가 아닌 개발용 모드입니다.** `.env`의 `DB_BACKEND=mssql`을 확인하고 백엔드를 다시 실행하세요. 종료는 각 창에서 `Ctrl + C`입니다.
+---
 
-## 문서 안내
+## 코드 구조
 
-| 대상 | 문서 | 주요 내용 |
+### 전체 구성
+
+```mermaid
+flowchart LR
+    S["센서"] -. "미연결" .-> P["PLC"]
+    P --> K["Kepware"]
+    K -->|"설비 데이터 기록"| D[("MSSQL<br/>HW_Q_DB")]
+    W["브라우저"] -->|"화면 파일"| U["serve_ui.py<br/>:5173"]
+    W -->|"API 요청"| B["백엔드 FastAPI<br/>:8000"]
+    B -->|"조회 · 일부 기록"| D
+```
+
+| 구성 요소 | 하는 일 |
+|---|---|
+| `serve_ui.py` (:5173) | `frontend/` 폴더의 화면 파일을 브라우저에 전달합니다. 데이터는 다루지 않습니다. |
+| 백엔드 (:8000) | 브라우저의 API 요청을 받아 로그인을 확인하고 DB를 조회·기록합니다. |
+| MSSQL `HW_Q_DB` | 기준정보(`m_` 테이블)와 실적·이력(`t_` 테이블)을 저장합니다. |
+| Kepware | 설비 데이터(LOT, 용접, 센서, 비전, 알람 발생)를 DB에 기록합니다. 이 저장소의 코드가 아닙니다. |
+
+브라우저는 화면 파일을 5173에서 받고, 데이터는 같은 주소의 8000 포트로 **직접** 요청합니다. 로그인하지 않으면 업무 API는 401을 반환합니다.
+
+### 폴더 구조
+
+```text
+AJIN-Handover-Code/
+├─ backend/                     백엔드 (Python FastAPI)
+│  ├─ main.py                   진입점: 앱 생성, 라우터 등록, 허용 주소(CORS), /health
+│  ├─ __init__.py               시간대를 KST로 고정
+│  ├─ config.py                 업무 설정값 (로그인 정책, 조회 기간 한도, 알람 우선순위·조치 가이드)
+│  ├─ db.py                     .env 읽기, DB_BACKEND에 따라 드라이버 선택
+│  ├─ db_mssql.py               MSSQL 연결 (pyodbc)
+│  ├─ db_sqlite.py              개발용 SQLite 연결 (운영 미사용)
+│  ├─ sqldialect.py             SQLite·MSSQL 문법 차이 흡수
+│  ├─ security.py               비밀번호 해시(scrypt), 로그인 쿠키 서명, 로그인 확인
+│  ├─ alarms.py                 알람 유형·우선순위·상태 판단
+│  ├─ common.py                 기간 계산, 파트 종합 판정, 불량 분포
+│  ├─ report.py                 PDF·Excel 보고서 생성
+│  ├─ vision_image.py           비전 이미지 표시 처리
+│  └─ routers/                  화면별 API (아래 표)
+├─ frontend/                    화면 (HTML·JavaScript, 빌드 과정 없음)
+│  ├─ index.html                화면 진입점
+│  ├─ css/                      디자인
+│  └─ js/
+│     ├─ main.js                화면 전환 (#/dashboard 등)
+│     ├─ api.js                 백엔드 API 호출 함수 모음
+│     ├─ config.js              API 주소, 메뉴, 갱신 주기, 센서 표시 규칙
+│     ├─ exporter.js            PDF·Excel·CSV 내려받기
+│     ├─ pages/                 메뉴별 화면
+│     └─ components/            공통 부품 (사이드바, 헤더, 차트, 팝업, 표 등)
+├─ docs/assets/                 README 배너 이미지
+├─ serve_ui.py                  화면 서버
+├─ requirements.txt             Python 패키지 목록
+├─ mssql_query.sql              DB 테이블 생성 스크립트 (DB 담당용, 설치 시 실행하지 않음)
+├─ .gitignore                   저장소 제외 목록
+└─ README.md                    이 문서
+```
+
+설치 후 프로젝트 폴더에는 저장소에 없는 아래 항목이 생깁니다. 모두 `.gitignore`로 제외되어 올라가지 않습니다.
+
+| 항목 | 만들어지는 시점 |
+|---|---|
+| `.venv/` | 3단계 |
+| `data/` | 5단계 (`data/.secret`은 첫 로그인 때 자동 생성) |
+| `.env` | 6단계 |
+| `__pycache__/` | 실행할 때 자동 생성 |
+
+### 화면과 코드 연결
+
+| 화면 (주소) | 화면 코드 | 호출 API | 백엔드 코드 |
+|---|---|---|---|
+| 로그인 | `js/pages/login.js` | `/api/auth/login`, `/api/auth/me`, `/api/auth/logout` | `routers/auth.py`, `security.py` |
+| 대시보드 (`#/dashboard`) | `js/pages/dashboard.js` | `GET /api/dashboard` | `routers/dashboard.py`, `common.py` |
+| 용접 현황 (`#/weld`) | `js/pages/weld.js` | `GET /api/weld`, `GET /api/weld/table` | `routers/weld.py` |
+| 비전 검사 현황 (`#/vision`) | `js/pages/vision.js` | `GET /api/vision`, `GET /api/vision/images/{id}` | `routers/vision.py`, `vision_image.py` |
+| Lot 조회 (`#/lot`) | `js/pages/lot/` | `GET /api/lots`, `GET /api/lots/{id}`, `GET /api/live/feed` | `routers/lots.py`, `routers/live.py` |
+| 알람 이력 조회 (`#/alarm`) | `js/pages/alarm/` | `GET /api/alarms`, `POST /api/alarms/{id}/ack`, `POST /api/alarms/{id}/actions` | `routers/alarm.py`, `alarms.py` |
+| 기준정보 관리 (`#/admin`, ADMIN) | `js/pages/admin/` | `/api/admin/...`, `/api/lines`, `/api/machines` | `routers/admin.py`, `routers/master.py` |
+| 사이드바 공정 연결 상태 | `js/components/sidebar.js` | `GET /api/status` | `routers/master.py` |
+| PDF·Excel·CSV 내려받기 | `js/exporter.js` | `POST /api/export/{weld\|vision\|lot\|alarm}` | `routers/export.py`, `report.py` |
+
+### 요청이 처리되는 순서 (예: Lot 조회)
+
+| 순서 | 일어나는 일 | 코드 |
 |---|---|---|
-| 설치·실행 담당 | [설치·실행 가이드](docs/setup.md) | 준비, 설치, `.env` 작성 규칙, 실행 확인 |
-| 화면 사용자 | [사용자 설명서](docs/user-guide.md) | 용어 풀이, 화면 안내, 기준정보 관리 |
-| 개발자 | [개발 가이드](docs/development.md) | 구성과 데이터 흐름, 코드 구조, 임시 코드 목록, **핵심 업무 규칙**, 테스트·검증 |
-| 운영자 | [운영·장애 대응 가이드](docs/operations.md) | 운영 구조와 서버 전환, 설비 연동, DB·운영 데이터 변경, 계정, 보안, 백업, **장애 대응 순서(17-3)**, 문제 해결 |
-| 배포 담당 | [변경·배포·롤백](docs/release.md) | 운영 반영 경로, 승인 흐름, **되돌리기(19-3)**, 버전 표기 규칙 |
-| 인수자·인계자 | [인수인계 현황](docs/handover.md) | 인계 기준, 책임 범위, 알려진 문제, 남은 과제, 체크리스트, 담당 |
-| 참고 (보관용) | [이전 코드 설명서](docs/legacy-code-readme.md) | 개발 단계 SQLite·Codespaces 기록. 운영 기준 아님 |
+| 1 | 화면에서 조회 조건을 받아 요청 | `frontend/js/pages/lot/` |
+| 2 | `GET http://127.0.0.1:8000/api/lots` 호출 | `frontend/js/api.js` |
+| 3 | 로그인 쿠키(`qms_session`) 확인, 없으면 401 | `backend/security.py` |
+| 4 | SQL 실행 | `backend/routers/lots.py` → `backend/db.py` → `backend/db_mssql.py` |
+| 5 | 결과를 표와 상세 패널에 표시 | `frontend/js/pages/lot/` |
 
-문서마다 내용이 다르면 **`docs/` 인수인계 문서를 우선**합니다. 데이터베이스 칼럼 정의, API 목록, 화면×테이블 매트릭스는 저장소 밖의 상세 설명서(PPT)에 있습니다([인수인계 현황 24-2](docs/handover.md)).
+### 어디를 고치면 되나
 
-### 장 번호 안내
-
-문서 본문은 하나의 장 번호 체계를 씁니다. 본문에서 "18-3", "12장"처럼 언급하면 아래 표로 위치를 찾으세요.
-
-| 장 | 문서 |
+| 바꾸고 싶은 것 | 파일 |
 |---|---|
-| 0, 1, 21~24 | [인수인계 현황](docs/handover.md) |
-| 2, 10, 11 | [사용자 설명서](docs/user-guide.md) |
-| 3, 5, 12, 18 | [개발 가이드](docs/development.md) |
-| 4, 13~17, 20 | [운영·장애 대응 가이드](docs/operations.md) |
-| 6~9 | [설치·실행 가이드](docs/setup.md) |
-| 19 | [변경·배포·롤백](docs/release.md) |
+| 화면 모양·문구 | `frontend/js/pages/<화면>`, `frontend/css/` |
+| 메뉴, 자동 갱신 주기, 센서 표시 이름·소수 자리 | `frontend/js/config.js` |
+| 조회 조건, 집계 SQL | `backend/routers/<기능>.py` |
+| 로그인 잠금·유지 시간, 조회 기간 한도, 알람 등급·조치 가이드 | `backend/config.py` |
+| 알람 유형·상태 판단 | `backend/alarms.py` |
+| 판정·불량 집계 | `backend/common.py` |
+| 허용 주소(CORS) | `backend/main.py` |
 
-## 알려진 문제와 제약
+### 주요 설정값 (`backend/config.py`, `frontend/js/config.js`)
 
-주요 항목만 요약했습니다. 전체 14건(K-1~K-14)과 임시 조치는 [인수인계 현황 21장](docs/handover.md), 남은 과제는 22장에 있습니다.
+| 항목 | 값 |
+|---|---|
+| 로그인 잠금 | 5회 연속 실패 시 10분 |
+| 로그인 유지 | 12시간, 자동 로그인 체크 시 7일 |
+| 조회 기간 한도 | 용접 7일, 비전·Lot·알람 31일 |
+| 비전 "가동중" 판정 | 최근 2분 안에 검사 데이터가 있을 때 |
+| 화면 자동 갱신 | Lot 실시간 피드 3초, 그 외 10초 |
+| PDF·Excel 즉시 생성 한도 | 100,000행 (PDF 상세 표는 2,000행) |
+| 화면 표시 센서 코드 | `WELD_CURRENT`, `WELD_PRESS`, `COOLANT_TEMP`, `WELD_TIME` |
 
-| ID | 내용 | 영향 |
+### 알아 둘 규칙
+
+<details>
+<summary>판정·알람 규칙 (코드만 보고는 알기 어려운 부분)</summary>
+
+**판정과 집계**
+
+- 생산량과 합격률은 `t_lot`에서 `lot_end_time`이 조회 기간 안이고 `final_result`가 `PENDING`이 아닌 LOT으로 계산합니다.
+- 파트 종합 판정은 해당 파트의 용접·비전 결과 중 하나라도 NG면 NG, 둘 다 OK면 OK입니다.
+- 사이클 타임은 첫 `LOAD_COMPLETE` 시각부터 마지막 비전 검사 종료 시각까지입니다.
+
+**알람 코드 형식** (`backend/alarms.py`)
+
+| 유형 | 판단 기준 | `alarm_code` 형식 | 우선순위 |
+|---|---|---|---|
+| 비전 알람 | 알람 설비의 `machine_type`이 `VISION` | `VIS_NG` | 2 경고 |
+| 기준 이탈 | `LIM_HI` / `LIM_LO`로 시작 | `LIM_HI:<파라미터코드>:<파트번호>` (예: `LIM_HI:WELD_CURRENT:2`) | 2 경고 |
+| 설비 알람 | 그 외 | `A-001`, 파트 연결 시 `A-001:2` | `A-004`는 3 주의, 그 외 `A-`는 1 긴급 |
+
+Kepware가 이 형식과 다르게 기록하면 모든 알람이 "설비 알람·경고"로 표시됩니다.
+
+**알람 상태**
+
+- `resolved_time`이 있으면 해결됨, 조치 기록이 있으면 조치중, 그 외는 미해결입니다.
+- 확인 버튼은 확인 시각·확인자를 최초 1회만 기록합니다.
+- 조치 등록은 `t_alarm_action`에 행을 추가하고 `resolved_time`을 현재 시각으로 채웁니다.
+- 조치 구분·소속·사번은 전용 칼럼이 없어 `action_desc` 앞에 `[구분|소속|사번|연락처]` 형식으로 저장됩니다.
+
+</details>
+
+<details>
+<summary>개발 단계에서 남은 코드 (운영에서 쓰지 않음)</summary>
+
+| 위치 | 내용 | 비고 |
 |---|---|---|
-| - | 센서 ↔ PLC 미연결, 센서부터 화면까지 값 미검증 | 공정 값·알람을 실제 설비 상태로 판단 불가 |
-| K-1 | `t_alarm_event.resolved_time`을 설비 해제와 조치 완료 두 의미로 쓸 수 있음 | Kepware가 기록하면 조치 없이 "해결됨" 표시, MTTR 왜곡 |
-| K-2 | `DB_BACKEND`가 없으면 SQLite로 조용히 동작 | 실 DB가 아닌 상태로 실행될 수 있음 (매번 `/health` 확인) |
-| K-3 | 개발용 `test.sql`, `start_all.sh`, `stop_all.sh`가 저장소에 포함 | 실 DB에서 실행하면 테스트 데이터가 들어감 (실행 금지) |
-| K-4 | 알람 조치 등록에 역할 검사 없음, 조회 전용 역할 없음 | 로그인한 누구나 조치 등록 가능 |
-| K-6 | DB 쿼리 시간 제한 없음 | DB 응답 지연 시 화면이 멈출 수 있음 |
-| K-7 | `127.0.0.1` 전용, 운영 주소 CORS 미등록, HTTPS 미적용 | 다른 PC 접속 불가, 서버 전환 시 변경 필요 ([운영 가이드 4-3](docs/operations.md)) |
-| - | 자동 테스트 없음, 운영 DB에서 수동 검증 | 수정 후 [개발 가이드 18장](docs/development.md) 체크리스트로 확인 |
+| `backend/db_sqlite.py`, `sqldialect.py` | 개발용 SQLite 지원 | `DB_BACKEND`가 없으면 SQLite로 동작하는 원인 |
+| `POST /api/auth/reset-db` | 개발 데이터 초기화 | 실 DB에서는 차단됨 |
+| `frontend/js/config.js`, `serve_ui.py` | Codespaces 개발 환경 분기 | Windows 로컬 실행에는 영향 없음 |
+| `routers/vision.py`의 `sim://` 경로 | 데모용 생성 이미지 | 실제 이미지는 `data/vision_images/` 경로 |
+| 사이드바 "POP DB" 표시 | 연동 확인용 | 제거 예정 |
 
-## 인계 기준과 담당
+</details>
 
-| 항목 | 내용 |
+### 다른 PC에서 접속하려면
+
+현재는 실행 PC에서만 접속됩니다. 여러 PC에서 쓰려면 아래 세 곳을 바꿔야 합니다. 화면 코드는 접속한 주소의 8000 포트를 자동으로 찾으므로 고치지 않아도 됩니다.
+
+| 위치 | 현재 | 바꿀 내용 |
+|---|---|---|
+| 창 1 실행 명령 | `--host 127.0.0.1` | 서버 주소로 받도록 변경 (전산팀과 협의) |
+| `serve_ui.py` 마지막 줄 | `("127.0.0.1", 5173)` | 위와 같이 변경 |
+| `backend/main.py`의 `allow_origins` | `localhost`, `127.0.0.1`만 허용 | `http://<서버 주소>:5173` 추가 |
+
+> [!CAUTION]
+> 주소를 열면 사내망의 누구나 접속할 수 있습니다. 방화벽 범위와 HTTPS 적용을 전산팀과 먼저 협의하세요.
+
+### 코드를 고친 뒤 반영하기
+
+1. 창 1과 창 2를 `Ctrl + C`로 끄고 7단계 명령으로 다시 실행합니다.
+2. 브라우저에서 `Ctrl + F5`로 새로 고칩니다.
+3. 8단계 확인 표를 다시 확인합니다.
+4. `requirements.txt`를 바꿨다면 4단계를 다시 실행합니다.
+
+빌드 과정은 없습니다. 자동 테스트도 없으므로 고친 화면을 직접 열어 확인합니다.
+
+---
+
+<details>
+<summary>설치가 확인된 패키지 버전</summary>
+
+정상 동작한 PC에 설치된 버전입니다. `requirements.txt`는 버전을 고정하지 않으므로, 나중에 설치할 때 버전이 달라져 문제가 생기면 이 표를 기준으로 맞춥니다.
+
+| 패키지 | 버전 |
 |---|---|
-| 인계일 | 2026-11-09 (인계일까지 코드·기능 변경 없음) |
-| 저장소 · 브랜치 | [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code) · `main` |
-| 운영 상태 | 실행 PC 1대 로컬 실행 · 서버 운영 전 |
-| DB 스키마 | [`mssql_query.sql`](mssql_query.sql) (테이블 23, FK 36, 인덱스 7) |
+| fastapi | 0.162.0 |
+| starlette | 1.10.0 |
+| uvicorn | 0.54.0 |
+| pydantic | 2.14.1 |
+| pydantic_core | 2.50.1 |
+| pyodbc | 5.3.0 |
+| openpyxl | 3.1.5 |
+| reportlab | 5.1.0 |
+| pillow | 13.0.0 |
+| anyio | 4.15.1 |
 
-| 역할 | 담당 |
-|---|---|
-| 코드 책임자 (인수인계자) | 진민수 |
-| 코드 책임자 (인수자) | `<기입>` |
-| 운영 담당 | `<기입>` |
-| DB 담당 | `<기입>` |
-| 전산팀 | `<기입>` |
-| 설비 담당 (PLC, Kepware, 센서) | `<기입>` |
+같은 버전으로 설치하는 예:
 
-연락처는 이 문서에 적지 않고 사내 연락망으로 전달합니다. 담당별 업무와 참조 문서는 [인수인계 현황 24장](docs/handover.md)에 있습니다.
+```powershell
+python -m pip install fastapi==0.162.0 uvicorn==0.54.0 pyodbc==5.3.0 openpyxl==3.1.5 reportlab==5.1.0 pillow==13.0.0
+```
+
+</details>
+
+인계 기준일: 2026-11-09 · 저장소: [ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code)
