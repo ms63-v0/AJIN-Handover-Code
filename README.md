@@ -1,18 +1,18 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
-  <img src="docs/assets/banner-light.svg" alt="AJIN HW 품질관리시스템. 용접·비전 품질 데이터를 한곳에서 추적합니다." width="100%">
+  <img src="docs/assets/banner-light.svg" alt="AJIN HW 품질관리시스템. 용접·비전 품질 데이터 조회·관리" width="100%">
 </picture>
 
 # AJIN HW 품질관리시스템
 
-용접·비전 품질 데이터를 한곳에서 추적합니다.
+용접·비전 품질 데이터 조회·관리
 
 용접·비전 공정의 LOT, 용접 결과, 센서 값, 비전 검사, 알람, 기준정보를 조회하고 관리하는 사내 웹 시스템입니다. 데이터는 사내 MSSQL 데이터베이스 `HW_Q_DB`에 저장되며, 설비 데이터는 PLC → Kepware → DB 경로로 들어옵니다.
 
-**빠른 이동**: [빠른 시작](#빠른-시작) · [문서 안내](#문서-안내) · [시스템 구성](#시스템-구성과-처리-흐름) · [알려진 문제](#알려진-문제와-제약) · [담당과 기준 버전](#담당-및-문서-기준-버전)
+**빠른 이동**: [빠른 시작](#빠른-시작) · [문서 안내](#문서-안내) · [시스템 구성](#시스템-구성과-처리-흐름) · [알려진 문제](#알려진-문제와-제약) · [인계 기준과 담당](#인계-기준과-담당)
 
 > [!IMPORTANT]
-> **현재 상태 (V1.1, 2026-11-09)**: PLC ↔ Kepware 연결과 Kepware → DB 전송은 구현되었고, **센서 ↔ PLC 연결이 남아 있습니다.** 센서부터 화면까지의 값은 아직 검증되지 않았으므로 화면의 공정 값과 알람을 현재 설비 상태로 판단하지 마세요. 현재는 실행 PC 1대에서만 접속할 수 있습니다(`127.0.0.1`).
+> **현재 상태 (2026-11-09 인계 기준)**: PLC ↔ Kepware 연결과 Kepware → DB 전송은 구현되었고, **센서 ↔ PLC 연결이 남아 있습니다.** 센서부터 화면까지의 값은 아직 검증되지 않았으므로 화면의 공정 값과 알람을 현재 설비 상태로 판단하지 마세요. 현재는 실행 PC 1대에서만 접속할 수 있습니다(`127.0.0.1`).
 
 ---
 
@@ -87,11 +87,14 @@ flowchart LR
 │  └─ assets/               README 배너 이미지
 ├─ serve_ui.py              화면 서버 (:5173)
 ├─ requirements.txt         Python 패키지 목록
-├─ .env.example             .env 견본 (개발 기준, 그대로 쓰지 말 것)
+├─ mssql_query.sql          DB 테이블 생성 스크립트
+├─ test.sql                 개발용 테스트 데이터 (실 DB 실행 금지)
+├─ start_all.sh, stop_all.sh  개발용 Codespaces 스크립트 (실 DB 미사용)
+├─ .gitignore               저장소 제외 목록 (.env, .venv, data/)
 └─ README.md                문서 허브 (이 문서)
 ```
 
-저장소에 없는 것: `.env`, `data/.secret`, `.venv`, `mssql_query.sql`(DB 담당 보관). 파일별 역할은 [개발 가이드 5장](docs/development.md)에 있습니다.
+저장소에 없는 것: `.env`(직접 작성), `data/.secret`(자동 생성), `.venv`(설치 시 생성). 파일별 역할은 [개발 가이드 5장](docs/development.md)에 있습니다.
 
 </details>
 
@@ -113,7 +116,8 @@ DB 계정·비밀번호·서버 주소는 담당자에게 별도 경로로 받�
 ### 1. 설치 (처음 한 번)
 
 ```powershell
-cd "<app 폴더의 실제 경로>"
+git clone https://github.com/ms63-v0/AJIN-Handover-Code.git
+cd AJIN-Handover-Code
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
@@ -124,7 +128,7 @@ python -m pip install -r requirements.txt
 ### 2. `.env` 작성
 
 > [!CAUTION]
-> **`.env.example`을 그대로 복사하지 마세요.** 개발 기준 견본이라 `DB_BACKEND=sqlite`, `sa`, 테스트 DB 이름, 값 뒤 주석이 들어 있습니다. 또한 **`DB_BACKEND` 줄이 없으면 오류 없이 SQLite(개발용) 모드로 켜집니다.** 아래 형식으로 직접 작성하고, 값 뒤에 주석·따옴표·공백을 넣지 마세요.
+> **`.env`는 저장소에 없고 견본도 제공하지 않으므로 직접 만듭니다.** 비밀번호가 들어가므로 저장소에 올리지 마세요. **`DB_BACKEND` 줄이 없으면 오류 없이 SQLite(개발용) 모드로 켜집니다.** 아래 형식 그대로 작성하고, 값 뒤에 주석·따옴표·공백을 넣지 마세요.
 
 ```powershell
 New-Item -Path .env -ItemType File
@@ -174,7 +178,7 @@ python serve_ui.py
 | 개발자 | [개발 가이드](docs/development.md) | 구성과 데이터 흐름, 코드 구조, 임시 코드 목록, **핵심 업무 규칙**, 테스트·검증 |
 | 운영자 | [운영·장애 대응 가이드](docs/operations.md) | 운영 구조와 서버 전환, 설비 연동, DB·운영 데이터 변경, 계정, 보안, 백업, **장애 대응 순서(17-3)**, 문제 해결 |
 | 배포 담당 | [변경·배포·롤백](docs/release.md) | 운영 반영 경로, 승인 흐름, **되돌리기(19-3)**, 버전 표기 규칙 |
-| 인수자·인계자 | [인수인계 현황](docs/handover.md) | 기준 버전, 책임 범위, 알려진 문제, 남은 과제, 체크리스트, 담당, 변경 이력 |
+| 인수자·인계자 | [인수인계 현황](docs/handover.md) | 인계 기준, 책임 범위, 알려진 문제, 남은 과제, 체크리스트, 담당 |
 | 참고 (보관용) | [이전 코드 설명서](docs/legacy-code-readme.md) | 개발 단계 SQLite·Codespaces 기록. 운영 기준 아님 |
 
 문서마다 내용이 다르면 **`docs/` 인수인계 문서를 우선**합니다. 데이터베이스 칼럼 정의, API 목록, 화면×테이블 매트릭스는 저장소 밖의 상세 설명서(PPT)에 있습니다([인수인계 현황 24-2](docs/handover.md)).
@@ -185,7 +189,7 @@ python serve_ui.py
 
 | 장 | 문서 |
 |---|---|
-| 0, 1, 21~25 | [인수인계 현황](docs/handover.md) |
+| 0, 1, 21~24 | [인수인계 현황](docs/handover.md) |
 | 2, 10, 11 | [사용자 설명서](docs/user-guide.md) |
 | 3, 5, 12, 18 | [개발 가이드](docs/development.md) |
 | 4, 13~17, 20 | [운영·장애 대응 가이드](docs/operations.md) |
@@ -201,20 +205,20 @@ python serve_ui.py
 | - | 센서 ↔ PLC 미연결, 센서부터 화면까지 값 미검증 | 공정 값·알람을 실제 설비 상태로 판단 불가 |
 | K-1 | `t_alarm_event.resolved_time`을 설비 해제와 조치 완료 두 의미로 쓸 수 있음 | Kepware가 기록하면 조치 없이 "해결됨" 표시, MTTR 왜곡 |
 | K-2 | `DB_BACKEND`가 없으면 SQLite로 조용히 동작 | 실 DB가 아닌 상태로 실행될 수 있음 (매번 `/health` 확인) |
+| K-3 | 개발용 `test.sql`, `start_all.sh`, `stop_all.sh`가 저장소에 포함 | 실 DB에서 실행하면 테스트 데이터가 들어감 (실행 금지) |
 | K-4 | 알람 조치 등록에 역할 검사 없음, 조회 전용 역할 없음 | 로그인한 누구나 조치 등록 가능 |
 | K-6 | DB 쿼리 시간 제한 없음 | DB 응답 지연 시 화면이 멈출 수 있음 |
 | K-7 | `127.0.0.1` 전용, 운영 주소 CORS 미등록, HTTPS 미적용 | 다른 PC 접속 불가, 서버 전환 시 변경 필요 ([운영 가이드 4-3](docs/operations.md)) |
 | - | 자동 테스트 없음, 운영 DB에서 수동 검증 | 수정 후 [개발 가이드 18장](docs/development.md) 체크리스트로 확인 |
 
-## 담당 및 문서 기준 버전
+## 인계 기준과 담당
 
 | 항목 | 내용 |
 |---|---|
-| 문서 버전 | V1.1 (2026-11-02) |
-| 대상 브랜치 · 커밋 | `<브랜치 이름 기입>` · `<커밋 해시 기입>` (`git rev-parse --short HEAD`) |
-| 화면 표기 버전 | `AJIN QMS v1.1.0` (`frontend/js/components/sidebar.js`) |
-| DB 스키마 기준 | `mssql_query.sql` v1.1 (테이블 23, FK 36, 인덱스 7) · DB 담당 보관 |
-| 운영 반영 상태 | 실행 PC 1대 로컬 실행 · 서버 운영 전 |
+| 인계일 | 2026-11-09 (인계일까지 코드·기능 변경 없음) |
+| 저장소 · 브랜치 | [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code) · `main` |
+| 운영 상태 | 실행 PC 1대 로컬 실행 · 서버 운영 전 |
+| DB 스키마 | [`mssql_query.sql`](mssql_query.sql) (테이블 23, FK 36, 인덱스 7) |
 
 | 역할 | 담당 |
 |---|---|
@@ -225,4 +229,4 @@ python serve_ui.py
 | 전산팀 | `<기입>` |
 | 설비 담당 (PLC, Kepware, 센서) | `<기입>` |
 
-연락처는 이 문서에 적지 않고 사내 연락망으로 전달합니다. 담당별 업무와 변경 이력은 [인수인계 현황 24·25장](docs/handover.md)에 있습니다.
+연락처는 이 문서에 적지 않고 사내 연락망으로 전달합니다. 담당별 업무와 참조 문서는 [인수인계 현황 24장](docs/handover.md)에 있습니다.

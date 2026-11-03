@@ -4,7 +4,7 @@
 
 코드 구조, 데이터 흐름, 코드만으로는 알기 어려운 업무 규칙, 수정 후 검증 방법입니다.
 
-> 문서 기준 V1.1 (2026-11-02). 본문의 장 번호(예: `12-3`, `18장`)는 전체 인수인계 문서 기준입니다. 장별 위치는 [문서 허브의 장 번호 안내](../README.md#장-번호-안내)에 있습니다.
+> 인계 기준일 2026-11-09. 본문의 장 번호(예: `12-3`, `18장`)는 전체 인수인계 문서 기준입니다. 장별 위치는 [문서 허브의 장 번호 안내](../README.md#장-번호-안내)에 있습니다.
 
 ## 목차
 
@@ -62,17 +62,18 @@
 
 | 항목 | 내용 |
 |---|---|
-| 저장소 | `https://github.com/ms63-v0/HW-Automation-Facility-Data-System` (저장소 루트 = `app` 폴더) |
+| 저장소 | [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code) |
 | 공개 범위 | `<Public / Private 확인 후 기입>` (16-5) |
-| 브랜치 운영 | `<기본 브랜치 이름>` = 운영 반영 기준 · 작업용 브랜치 규칙 `<기입>` |
+| 브랜치 운영 | `main` = 인계 기준 · 작업용 브랜치 규칙 `<기입>` |
 | 접근 권한 신청 | `<신청 경로 기입: 예) 프로젝트 담당에게 GitHub 계정 전달 → Collaborator 초대>` |
 | 권한 회수 | 담당 변경·퇴직 시 Collaborator에서 제거 (16-3) |
-| 저장소에 없는 것 | `.env`, `data/.secret`, `.venv`, `mssql_query.sql`(DB 담당 보관) |
+| 저장소에 없는 것 | `.env`(직접 작성, 8장), `data/.secret`(자동 생성), `.venv`(설치 시 생성) |
+| 개발·테스트용 파일 | `test.sql`, `start_all.sh`, `stop_all.sh` · **실 DB에서 사용 금지** (5-5) |
 
 ### 5-2. 폴더 구조
 
 ```text
-app/
+AJIN-Handover-Code/
 ├─ backend/                     API 서버
 │  ├─ main.py                   ★ 진입점: 서버 시작, 라우터 등록, CORS, /health
 │  ├─ config.py                 업무 설정값 (로그인 정책, 조회 한도, 알람 우선순위·조치 가이드)
@@ -99,7 +100,11 @@ app/
 ├─ data/.secret                 로그인 서명 키 (자동 생성)
 ├─ serve_ui.py                  ★ 화면 서버 진입점 (:5173)
 ├─ requirements.txt             Python 패키지 목록
-├─ .env / .env.example          DB 접속 정보 / 견본 (8장 주의)
+├─ .env                         DB 접속 정보 (직접 작성, 저장소에 올리지 않음)
+├─ .gitignore                   저장소 제외 목록 (.env, .venv, data/)
+├─ mssql_query.sql              DB 테이블 생성 스크립트 (14장)
+├─ test.sql                     개발용 테스트 데이터 (실 DB 실행 금지)
+├─ start_all.sh / stop_all.sh   개발용 Codespaces 기동·종료 스크립트 (실 DB 미사용)
 ├─ docs/                        인수인계 문서 (설치, 사용자, 개발, 운영, 배포, 인수인계)
 └─ README.md                    문서 허브 (저장소 첫 화면)
 ```
@@ -141,6 +146,8 @@ app/
 | `t_alarm_action.action_desc` 접두어 `[구분\|소속\|사번\|연락처]` | 조치 구분·작업자 정보를 내용 앞에 저장 | 전용 칼럼 없음 | 칼럼 추가 후 분리 (22장) |
 | `DEFECT_CATALOG` (config.py) | 불량 유형 이름 목록 | 시뮬레이터용, 분포 차트는 DB 실제 값 집계 | 현장 불량 코드 확정 시 정리 |
 | 사이드바 "POP DB" 표시 | 연동 확인용 값 표시 | 개발 중 확인용 | 제거 예정 |
+| `test.sql` | `m_line`에 검증용 라인(`TEST_0426`)을 넣는 SQL | 화면 연동 확인용 | **실 DB에서 실행 금지** · 정리 여부 결정 |
+| `start_all.sh`, `stop_all.sh` | 리눅스(Codespaces)에서 백엔드·DB 컨테이너 기동·종료 | 개발 테스트 환경용, 이전 저장소 경로 전제 | Windows 운영에서는 사용하지 않음 · 정리 여부 결정 |
 
 ---
 

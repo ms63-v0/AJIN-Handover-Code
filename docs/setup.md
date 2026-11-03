@@ -4,7 +4,7 @@
 
 신규 PC에서 소스를 받아 설치하고, `.env`를 작성하고, 실행을 확인하는 절차입니다.
 
-> 문서 기준 V1.1 (2026-11-02). 본문의 장 번호(예: `12-3`, `18장`)는 전체 인수인계 문서 기준입니다. 장별 위치는 [문서 허브의 장 번호 안내](../README.md#장-번호-안내)에 있습니다.
+> 인계 기준일 2026-11-09. 본문의 장 번호(예: `12-3`, `18장`)는 전체 인수인계 문서 기준입니다. 장별 위치는 [문서 허브의 장 번호 안내](../README.md#장-번호-안내)에 있습니다.
 
 ## 목차
 
@@ -21,10 +21,15 @@
 
 | 방법 | 설명 |
 |---|---|
-| GitHub에서 내려받기 | **Code → Download ZIP** (읽기 전용 확인용) |
+| GitHub에서 내려받기 | [https://github.com/ms63-v0/AJIN-Handover-Code](https://github.com/ms63-v0/AJIN-Handover-Code) → **Code → Download ZIP** (읽기 전용 확인용) |
 | Git / GitHub Desktop | **Clone** 후 **Pull**로 최신화 (코드 수정·운영 반영 시 이 방법 사용, 19장) |
 
-받은 폴더 안에 `backend`, `frontend`, `requirements.txt`가 바로 보이면 맞습니다. 이 폴더를 이하 **`app 폴더`** 라고 부릅니다.
+```powershell
+git clone https://github.com/ms63-v0/AJIN-Handover-Code.git
+cd AJIN-Handover-Code
+```
+
+받은 폴더 안에 `backend`, `frontend`, `requirements.txt`가 바로 보이면 맞습니다. 이 폴더를 이하 **저장소 폴더** 라고 부릅니다.
 
 ### 6-2. 실행 환경과 버전
 
@@ -59,8 +64,8 @@
 ## 7. 설치하기 (처음 한 번만)
 
 ```powershell
-# 1) app 폴더로 이동
-cd "<app 폴더의 실제 경로>"
+# 1) 저장소 폴더로 이동
+cd "<저장소 폴더의 실제 경로>"
 
 # 2) 가상환경 만들기
 py -m venv .venv
@@ -90,10 +95,10 @@ python -m pip install -r requirements.txt
 
 ## 8. `.env` 작성 가이드 (가장 중요)
 
-`.env`는 **DB 접속 정보를 적는 파일**입니다. `app` 폴더 안, `backend` 폴더와 같은 위치에 둡니다.
+`.env`는 **DB 접속 정보를 적는 파일**입니다. 저장소 폴더 안, `backend` 폴더와 같은 위치에 둡니다.
 
-> [!CAUTION]
-> **`.env.example`을 그대로 복사해서 쓰지 마세요.** 개발 시절 견본이라 `DB_BACKEND=sqlite`, `MSSQL_USER=sa`, 테스트 DB 이름, 값 뒤 주석이 들어 있습니다. 반드시 8-3을 기준으로 작성하세요.
+> [!IMPORTANT]
+> **`.env`는 저장소에 없으며 견본 파일도 제공하지 않습니다.** 설치하는 PC에서 8-3 형식으로 직접 만듭니다. 비밀번호가 들어가므로 저장소에 올리지 않습니다(`.gitignore`에 등록, 16장).
 
 ### 8-1. 만드는 방법
 
@@ -156,7 +161,7 @@ Get-Content .env | Select-String "DB_BACKEND|MSSQL_SERVER|MSSQL_DATABASE|MSSQL_U
 
 ## 9. 실행하기
 
-app 폴더에서 **PowerShell 창 두 개**를 엽니다. 두 창 모두 `(.venv)` 상태여야 합니다.
+저장소 폴더에서 **PowerShell 창 두 개**를 엽니다. 두 창 모두 `(.venv)` 상태여야 합니다.
 
 | 창 | 명령 | 정상 표시 |
 |---|---|---|
