@@ -36,7 +36,7 @@
 |---|---|---|---|
 | 운영체제 | Windows 10 이상 | - | - |
 | Python | 3.10 이상, 설치 시 **"Add python.exe to PATH" 체크** | `py --version` | `Python 3.10` 이상 |
-| ODBC 드라이버 | ODBC Driver 18 for SQL Server (Microsoft 공식 사이트) | `Get-OdbcDriver -Name "ODBC Driver 18 for SQL Server"` | 드라이버 정보가 출력됨 |
+| ODBC 드라이버 | ODBC Driver 18 for SQL Server | `Get-OdbcDriver -Name "ODBC Driver 18 for SQL Server"` | 드라이버 정보가 출력됨 |
 | Git | 선택 (없으면 1단계에서 ZIP으로 받기) | `git --version` | 버전이 출력됨 |
 | 네트워크 | 사내망 또는 VPN으로 DB 서버에 접근 가능 | - | 전산팀 확인 |
 
